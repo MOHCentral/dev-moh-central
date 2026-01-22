@@ -1,0 +1,129 @@
+{{define "content"}}
+<div x-data="tournamentsList()" x-init="init()">
+    <!-- Header -->
+    <div class="mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-3xl font-bold mb-2">Tournaments</h1>
+            <p class="text-gray-400">Compete for glory in official OpenMOHAA tournaments</p>
+        </div>
+        {{if .User}}
+        <button class="px-4 py-2 bg-mohaa-olive hover:bg-opacity-90 rounded font-medium transition">
+            Create Tournament
+        </button>
+        {{end}}
+    </div>
+
+    <!-- Active Tournaments -->
+    <div class="mb-10">
+        <h2 class="text-xl font-semibold mb-4 flex items-center">
+            <span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+            Active Tournaments
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <template x-for="t in activeTournaments" :key="t.id">
+                <a :href="'/tournaments/' + t.id"
+                    class="block bg-gray-800/50 border border-gray-700 rounded-lg overflow-hidden hover:border-mohaa-sand transition group">
+                    <div class="h-32 bg-gray-900 relative">
+                        <img :src="t.banner || '/static/img/tournament_default.jpg'"
+                            class="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition">
+                        <div class="absolute top-2 right-2 px-2 py-1 bg-green-500 text-black text-xs font-bold rounded">
+                            LIVE</div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-lg font-bold mb-1 group-hover:text-mohaa-sand transition" x-text="t.name"></h3>
+                        <div class="flex items-center text-sm text-gray-400 mb-4">
+                            <span x-text="t.mode"></span>
+                            <span class="mx-2">•</span>
+                            <span x-text="t.teams + ' Teams'"></span>
+                        </div>
+                        <div class="flex justify-between items-end">
+                            <div class="text-sm">
+                                <div class="text-gray-500">Prize Pool</div>
+                                <div class="font-bold text-yellow-400" x-text="t.prize"></div>
+                            </div>
+                            <span class="text-sm text-mohaa-sand">View Bracket &rarr;</span>
+                        </div>
+                    </div>
+                </a>
+            </template>
+        </div>
+
+        <div x-show="activeTournaments.length === 0"
+            class="text-gray-500 italic p-8 text-center bg-gray-800/30 rounded-lg">
+            No active tournaments at the moment.
+        </div>
+    </div>
+
+    <!-- Upcoming Tournaments -->
+    <div class="mb-10">
+        <h2 class="text-xl font-semibold mb-4 text-blue-400">Upcoming</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <template x-for="t in upcomingTournaments" :key="t.id">
+                <div class="bg-gray-800/30 border border-gray-700/50 rounded-lg p-6 hover:bg-gray-800/50 transition">
+                    <h3 class="text-lg font-bold mb-2" x-text="t.name"></h3>
+                    <div class="text-sm text-gray-400 mb-4">
+                        <div class="flex items-center mb-1">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                                </path>
+                            </svg>
+                            <span x-text="formatDate(t.startDate)"></span>
+                        </div>
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                                </path>
+                            </svg>
+                            <span x-text="t.registered + '/' + t.maxTeams + ' Teams'"></span>
+                        </div>
+                    </div>
+                    <button
+                        class="w-full py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-bold transition">Register
+                        Now</button>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+    function tournamentsList() {
+        return {
+            activeTournaments: [],
+            upcomingTournaments: [],
+
+            init() {
+                this.fetchTournaments();
+            },
+
+            async fetchTournaments() {
+                try {
+                    const res = await fetch('/api/v1/tournaments');
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.activeTournaments = data.filter(t => t.status === 'active');
+                        this.upcomingTournaments = data.filter(t => t.status === 'upcoming');
+                    } else {
+                        // Fallback Demo Data
+                        this.activeTournaments = [
+                            { id: 't1', name: 'Winter Championship 2026', mode: '5v5 OBJ', teams: 16, prize: '$500', banner: '' }
+                        ];
+                        this.upcomingTournaments = [
+                            { id: 't2', name: 'Spring Ladder', startDate: '2026-03-01T12:00:00Z', registered: 4, maxTeams: 32 }
+                        ];
+                    }
+                } catch (e) {
+                    console.error('Failed to load tournaments', e);
+                }
+            },
+
+            formatDate(dateStr) {
+                return new Date(dateStr).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+            }
+        }
+    }
+</script>
+{{end}}

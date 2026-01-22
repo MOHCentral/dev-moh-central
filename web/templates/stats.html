@@ -1,0 +1,742 @@
+{{define "content"}}
+<div x-data="globalStats()" x-init="init()">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold">Global Statistics</h1>
+        <p class="text-gray-400">Server-wide stats and analytics</p>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+        <div class="stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-400 uppercase">Total Players</p>
+                    <p class="text-2xl font-bold text-mohaa-sand" x-text="formatNumber(stats.totalPlayers)"></p>
+                </div>
+                <span class="text-2xl">👥</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-400 uppercase">Total Kills</p>
+                    <p class="text-2xl font-bold text-mohaa-sand" x-text="formatNumber(stats.totalKills)"></p>
+                </div>
+                <span class="text-2xl">💀</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-400 uppercase">Total Matches</p>
+                    <p class="text-2xl font-bold text-mohaa-sand" x-text="formatNumber(stats.totalMatches)"></p>
+                </div>
+                <span class="text-2xl">🎮</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-400 uppercase">Total Playtime</p>
+                    <p class="text-2xl font-bold text-mohaa-sand" x-text="formatPlaytime(stats.totalPlaytime)"></p>
+                </div>
+                <span class="text-2xl">⏱️</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-400 uppercase">Headshots</p>
+                    <p class="text-2xl font-bold text-yellow-400" x-text="formatNumber(stats.totalHeadshots)"></p>
+                </div>
+                <span class="text-2xl">🎯</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-400 uppercase">Avg K/D</p>
+                    <p class="text-2xl font-bold text-mohaa-sand" x-text="stats.avgKD?.toFixed(2) || '1.00'"></p>
+                </div>
+                <span class="text-2xl">📊</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deep Dive Analytics (Advanced Drill-Down API) -->
+    <div class="bg-gray-800/80 rounded-xl border border-mohaa-olive/50 p-6 mb-8 shadow-lg shadow-mohaa-olive/10"
+        x-data="drillDown()">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+            <div>
+                <h2 class="text-xl font-bold text-mohaa-sand flex items-center gap-2">
+                    <span class="text-2xl">⚡</span> Deep Dive Analytics
+                </h2>
+                <p class="text-gray-400 text-sm">Explore the database with custom queries</p>
+            </div>
+
+            <!-- Query Controls -->
+            <div class="flex flex-wrap gap-3 mt-4 md:mt-0 p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+                <div>
+                    <label class="block text-xs text-gray-500 uppercase mb-1">Group By</label>
+                    <select x-model="query.dimension" @change="fetchData()"
+                        class="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-1.5 focus:border-mohaa-olive focus:ring-1 focus:ring-mohaa-olive outline-none">
+                        <option value="weapon">Weapon</option>
+                        <option value="map">Map</option>
+                        <option value="player">Player</option>
+                        <option value="hitloc">Hit Location</option>
+                        <option value="server">Server</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-500 uppercase mb-1">Metric</label>
+                    <select x-model="query.metric" @change="fetchData()"
+                        class="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-1.5 focus:border-mohaa-olive focus:ring-1 focus:ring-mohaa-olive outline-none">
+                        <option value="kills">Total Kills</option>
+                        <option value="deaths">Total Deaths</option>
+                        <option value="headshots">Headshots</option>
+                        <option value="accuracy">Accuracy %</option>
+                        <option value="kdr">K/D Ratio</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-500 uppercase mb-1">Filter Map</label>
+                    <select x-model="query.filter_map" @change="fetchData()"
+                        class="bg-gray-800 border border-gray-600 text-white text-sm rounded px-3 py-1.5 focus:border-mohaa-olive focus:ring-1 focus:ring-mohaa-olive outline-none w-32">
+                        <option value="">All Maps</option>
+                        <option value="dm/mohdm1">Stalingrad</option>
+                        <option value="dm/mohdm2">Southern France</option>
+                        <option value="dm/mohdm3">Remagen</option>
+                        <option value="dm/mohdm4">The Crossroads</option>
+                        <option value="dm/mohdm5">Snowy Park</option>
+                        <option value="dm/mohdm6">Stalingrad (2)</option>
+                        <option value="dm/mohdm7">Algiers</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Chart -->
+        <div class="relative h-72 w-full bg-gray-900/30 rounded-lg border border-gray-700/50 p-4">
+            <canvas id="drillDownChart"></canvas>
+
+            <!-- Loading State -->
+            <div x-show="loading"
+                class="absolute inset-0 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm rounded-lg transition-opacity"
+                x-transition>
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-mohaa-olive"></div>
+            </div>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Player Activity Over Time -->
+        <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">Player Activity</h3>
+                <div class="flex space-x-2">
+                    <button @click="activityPeriod = 'day'"
+                        :class="activityPeriod === 'day' ? 'bg-mohaa-olive' : 'bg-gray-700'"
+                        class="px-2 py-1 text-xs rounded transition">24h</button>
+                    <button @click="activityPeriod = 'week'"
+                        :class="activityPeriod === 'week' ? 'bg-mohaa-olive' : 'bg-gray-700'"
+                        class="px-2 py-1 text-xs rounded transition">Week</button>
+                    <button @click="activityPeriod = 'month'"
+                        :class="activityPeriod === 'month' ? 'bg-mohaa-olive' : 'bg-gray-700'"
+                        class="px-2 py-1 text-xs rounded transition">Month</button>
+                </div>
+            </div>
+            <div class="h-64">
+                <canvas id="activityChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Weapon Popularity -->
+        <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+            <h3 class="text-lg font-semibold mb-4">Weapon Popularity</h3>
+            <div class="h-64">
+                <canvas id="weaponChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Map Popularity -->
+        <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+            <h3 class="text-lg font-semibold mb-4">Popular Maps</h3>
+            <div class="h-64">
+                <canvas id="mapChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Game Mode Distribution -->
+        <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+            <h3 class="text-lg font-semibold mb-4">Game Modes</h3>
+            <div class="h-64">
+                <canvas id="modeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Player Skill Distribution -->
+        <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+            <h3 class="text-lg font-semibold mb-4">K/D Distribution</h3>
+            <div class="h-64">
+                <canvas id="kdChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 3 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Kill Types -->
+        <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+            <h3 class="text-lg font-semibold mb-4">Kill Types</h3>
+            <div class="h-64">
+                <canvas id="killTypeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Peak Hours -->
+        <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+            <h3 class="text-lg font-semibold mb-4">Peak Playing Hours</h3>
+            <div class="h-64">
+                <canvas id="peakHoursChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Activity Heatmap -->
+    <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4 mb-6">
+        <h3 class="text-lg font-semibold mb-4">Weekly Activity Heatmap</h3>
+        <div class="overflow-x-auto">
+            <div class="grid grid-cols-25 gap-1 min-w-[800px]">
+                <!-- Hour labels -->
+                <div class="text-xs text-gray-500"></div>
+                <template x-for="h in 24" :key="'h-'+h">
+                    <div class="text-xs text-gray-500 text-center" x-text="h-1"></div>
+                </template>
+
+                <!-- Days -->
+                <template x-for="(day, di) in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']" :key="day">
+                    <template x-fragment>
+                        <div class="text-xs text-gray-500 text-right pr-2" x-text="day"></div>
+                        <template x-for="h in 24" :key="day+'-'+h">
+                            <div class="w-5 h-5 rounded-sm"
+                                :style="'background-color: rgba(74, 93, 35, ' + (weeklyHeatmap[di]?.[h-1] || 0) / 100 + ')'">
+                            </div>
+                        </template>
+                    </template>
+                </template>
+            </div>
+        </div>
+        <div class="flex items-center justify-end mt-4 space-x-2 text-xs text-gray-400">
+            <span>Less</span>
+            <div class="flex space-x-1">
+                <div class="w-4 h-4 rounded-sm bg-mohaa-olive/20"></div>
+                <div class="w-4 h-4 rounded-sm bg-mohaa-olive/40"></div>
+                <div class="w-4 h-4 rounded-sm bg-mohaa-olive/60"></div>
+                <div class="w-4 h-4 rounded-sm bg-mohaa-olive/80"></div>
+                <div class="w-4 h-4 rounded-sm bg-mohaa-olive"></div>
+            </div>
+            <span>More</span>
+        </div>
+    </div>
+
+    <!-- Distance & Speed Stats -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Total Distance Traveled -->
+        <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+            <h3 class="text-lg font-semibold mb-4">Distance Traveled</h3>
+            <div class="grid grid-cols-3 gap-4 mb-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-mohaa-sand" x-text="formatDistance(stats.totalWalked)"></div>
+                    <div class="text-xs text-gray-400">Walked</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-yellow-400" x-text="formatDistance(stats.totalSprinted)"></div>
+                    <div class="text-xs text-gray-400">Sprinted</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-400" x-text="formatDistance(stats.totalDriven)"></div>
+                    <div class="text-xs text-gray-400">Vehicle</div>
+                </div>
+            </div>
+            <div class="h-48">
+                <canvas id="distanceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Kill Distance Stats -->
+        <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+            <h3 class="text-lg font-semibold mb-4">Kill Distance Analysis</h3>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-mohaa-sand" x-text="stats.avgKillDistance?.toFixed(1) + 'm'">
+                    </div>
+                    <div class="text-xs text-gray-400">Average Distance</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-mohaa-sand" x-text="stats.maxKillDistance?.toFixed(1) + 'm'">
+                    </div>
+                    <div class="text-xs text-gray-400">Longest Kill</div>
+                </div>
+            </div>
+            <div class="h-48">
+                <canvas id="killDistanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Records -->
+    <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+        <h3 class="text-lg font-semibold mb-4">🏆 All-Time Records</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-gray-900/50 rounded-lg p-4">
+                <div class="text-xs text-gray-400 uppercase mb-1">Most Kills (Single Match)</div>
+                <div class="text-xl font-bold text-mohaa-sand">{{.Records.MostKillsMatch.Value}}</div>
+                <a href="/player/{{.Records.MostKillsMatch.PlayerGUID}}" class="text-sm text-gray-400 hover:text-white">
+                    {{.Records.MostKillsMatch.PlayerName}}
+                </a>
+            </div>
+            <div class="bg-gray-900/50 rounded-lg p-4">
+                <div class="text-xs text-gray-400 uppercase mb-1">Longest Kill Streak</div>
+                <div class="text-xl font-bold text-yellow-400">{{.Records.LongestStreak.Value}}</div>
+                <a href="/player/{{.Records.LongestStreak.PlayerGUID}}" class="text-sm text-gray-400 hover:text-white">
+                    {{.Records.LongestStreak.PlayerName}}
+                </a>
+            </div>
+            <div class="bg-gray-900/50 rounded-lg p-4">
+                <div class="text-xs text-gray-400 uppercase mb-1">Highest K/D (100+ kills)</div>
+                <div class="text-xl font-bold text-green-400">{{printf "%.2f" .Records.HighestKD.Value}}</div>
+                <a href="/player/{{.Records.HighestKD.PlayerGUID}}" class="text-sm text-gray-400 hover:text-white">
+                    {{.Records.HighestKD.PlayerName}}
+                </a>
+            </div>
+            <div class="bg-gray-900/50 rounded-lg p-4">
+                <div class="text-xs text-gray-400 uppercase mb-1">Longest Shot</div>
+                <div class="text-xl font-bold text-blue-400">{{printf "%.1f" .Records.LongestShot.Value}}m</div>
+                <a href="/player/{{.Records.LongestShot.PlayerGUID}}" class="text-sm text-gray-400 hover:text-white">
+                    {{.Records.LongestShot.PlayerName}}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function globalStats() {
+        return {
+            stats: {
+                totalPlayers: 15420,
+                totalKills: 4850000,
+                totalMatches: 125000,
+                totalPlaytime: 1250000 * 3600,
+                totalHeadshots: 890000,
+                avgKD: 1.02,
+                totalWalked: 15000000,
+                totalSprinted: 8000000,
+                totalDriven: 2500000,
+                avgKillDistance: 32.5,
+                maxKillDistance: 285.7
+            },
+            activityPeriod: 'week',
+            weeklyHeatmap: [],
+            charts: {},
+
+            init() {
+                this.generateWeeklyHeatmap();
+                this.loadStats();
+
+                this.$nextTick(() => {
+                    this.initActivityChart();
+                    this.initWeaponChart();
+                    this.initMapChart();
+                    this.initModeChart();
+                    this.initKDChart();
+                    this.initKillTypeChart();
+                    this.initPeakHoursChart();
+                    this.initDistanceChart();
+                    this.initKillDistanceChart();
+                });
+
+                this.$watch('activityPeriod', () => this.updateActivityChart());
+            },
+
+            async loadStats() {
+                try {
+                    const res = await fetch('/api/v1/stats/global');
+                    this.stats = await res.json();
+                } catch (e) {
+                    console.error('Failed to load stats:', e);
+                }
+            },
+
+            generateWeeklyHeatmap() {
+                this.weeklyHeatmap = Array.from({ length: 7 }, () =>
+                    Array.from({ length: 24 }, () => Math.floor(Math.random() * 100))
+                );
+            },
+
+            initActivityChart() {
+                const ctx = document.getElementById('activityChart');
+                if (!ctx) return;
+
+                this.charts.activity = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: this.getActivityLabels(),
+                        datasets: [
+                            {
+                                label: 'Players',
+                                data: Array.from({ length: 24 }, () => Math.floor(Math.random() * 100) + 20),
+                                borderColor: '#4a5d23',
+                                backgroundColor: 'rgba(74, 93, 35, 0.2)',
+                                fill: true,
+                                tension: 0.4,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Kills',
+                                data: Array.from({ length: 24 }, () => Math.floor(Math.random() * 500) + 100),
+                                borderColor: '#c4b896',
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            y: { type: 'linear', position: 'left', beginAtZero: true },
+                            y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            },
+
+            getActivityLabels() {
+                if (this.activityPeriod === 'day') {
+                    return Array.from({ length: 24 }, (_, i) => `${i}:00`);
+                } else if (this.activityPeriod === 'week') {
+                    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                } else {
+                    return Array.from({ length: 30 }, (_, i) => `Day ${i + 1}`);
+                }
+            },
+
+            updateActivityChart() {
+                if (!this.charts.activity) return;
+                const labels = this.getActivityLabels();
+                this.charts.activity.data.labels = labels;
+                this.charts.activity.data.datasets[0].data = Array.from({ length: labels.length }, () => Math.floor(Math.random() * 100) + 20);
+                this.charts.activity.data.datasets[1].data = Array.from({ length: labels.length }, () => Math.floor(Math.random() * 500) + 100);
+                this.charts.activity.update();
+            },
+
+            initWeaponChart() {
+                const ctx = document.getElementById('weaponChart');
+                if (!ctx) return;
+
+                this.charts.weapon = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['M1 Garand', 'Thompson', 'MP40', 'Springfield', 'BAR', 'Kar98k', 'Shotgun', 'Grenade'],
+                        datasets: [{
+                            label: 'Kills',
+                            data: [450000, 380000, 320000, 180000, 150000, 140000, 95000, 85000],
+                            backgroundColor: 'rgba(74, 93, 35, 0.8)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            },
+
+            initMapChart() {
+                const ctx = document.getElementById('mapChart');
+                if (!ctx) return;
+
+                this.charts.map = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Omaha Beach', 'Snowy Park', 'The Hunt', 'Stalingrad', 'Bridge'],
+                        datasets: [{
+                            data: [35, 25, 18, 12, 10],
+                            backgroundColor: ['#4a5d23', '#8b9a4b', '#c4b896', '#d4a574', '#6b7280']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            },
+
+            initModeChart() {
+                const ctx = document.getElementById('modeChart');
+                if (!ctx) return;
+
+                this.charts.mode = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Team Deathmatch', 'Free For All', 'Objective', 'Round-Based'],
+                        datasets: [{
+                            data: [45, 30, 15, 10],
+                            backgroundColor: ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            },
+
+            initKDChart() {
+                const ctx = document.getElementById('kdChart');
+                if (!ctx) return;
+
+                this.charts.kd = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['<0.5', '0.5-0.75', '0.75-1', '1-1.25', '1.25-1.5', '1.5-2', '2+'],
+                        datasets: [{
+                            label: 'Players',
+                            data: [850, 2100, 4500, 3800, 2200, 1400, 570],
+                            backgroundColor: ['#ef4444', '#f97316', '#fbbf24', '#84cc16', '#22c55e', '#14b8a6', '#3b82f6']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            },
+
+            initKillTypeChart() {
+                const ctx = document.getElementById('killTypeChart');
+                if (!ctx) return;
+
+                this.charts.killType = new Chart(ctx, {
+                    type: 'polarArea',
+                    data: {
+                        labels: ['Body Shot', 'Headshot', 'Explosive', 'Melee', 'Vehicle'],
+                        datasets: [{
+                            data: [55, 22, 15, 5, 3],
+                            backgroundColor: ['rgba(74, 93, 35, 0.8)', 'rgba(251, 191, 36, 0.8)', 'rgba(249, 115, 22, 0.8)', 'rgba(107, 114, 128, 0.8)', 'rgba(59, 130, 246, 0.8)']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            },
+
+            initPeakHoursChart() {
+                const ctx = document.getElementById('peakHoursChart');
+                if (!ctx) return;
+
+                this.charts.peak = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+                        datasets: [{
+                            label: 'Avg Players',
+                            data: [15, 12, 8, 5, 4, 5, 8, 18, 35, 45, 52, 58, 62, 65, 60, 55, 58, 68, 85, 92, 88, 72, 48, 28],
+                            borderColor: '#4a5d23',
+                            backgroundColor: 'rgba(74, 93, 35, 0.3)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            },
+
+            initDistanceChart() {
+                const ctx = document.getElementById('distanceChart');
+                if (!ctx) return;
+
+                this.charts.distance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Walking', 'Sprinting', 'Vehicle'],
+                        datasets: [{
+                            data: [15000, 8000, 2500],
+                            backgroundColor: ['#4a5d23', '#fbbf24', '#3b82f6']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            },
+
+            initKillDistanceChart() {
+                const ctx = document.getElementById('killDistanceChart');
+                if (!ctx) return;
+
+                this.charts.killDistance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['0-10m', '10-25m', '25-50m', '50-100m', '100m+'],
+                        datasets: [{
+                            label: 'Kills',
+                            data: [980000, 1850000, 1200000, 650000, 170000],
+                            backgroundColor: ['#ef4444', '#f97316', '#fbbf24', '#22c55e', '#3b82f6']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            },
+
+            formatNumber(n) {
+                if (!n) return '0';
+                if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+                if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+                return n.toLocaleString();
+            },
+
+            formatPlaytime(seconds) {
+                if (!seconds) return '0h';
+                const years = Math.floor(seconds / (365 * 24 * 3600));
+                if (years > 0) return years + 'y+';
+                const days = Math.floor(seconds / (24 * 3600));
+                if (days > 0) return days + 'd';
+                return Math.floor(seconds / 3600) + 'h';
+            },
+
+            formatDistance(meters) {
+                if (!meters) return '0m';
+                if (meters >= 1000000) return (meters / 1000).toFixed(0) + 'km';
+                if (meters >= 1000) return (meters / 1000).toFixed(1) + 'km';
+                return meters + 'm';
+            }
+        }
+    }
+
+    function drillDown() {
+        return {
+            loading: false,
+            query: {
+                dimension: 'weapon',
+                metric: 'kills',
+                filter_map: ''
+            },
+            chart: null,
+
+            init() {
+                this.fetchData();
+            },
+
+            async fetchData() {
+                this.loading = true;
+                try {
+                    // Construct query URL
+                    const params = new URLSearchParams({
+                        dimension: this.query.dimension,
+                        metric: this.query.metric,
+                        limit: 15
+                    });
+
+                    if (this.query.filter_map) params.append('filter_map', this.query.filter_map);
+
+                    const res = await fetch(`/api/v1/stats/query?${params.toString()}`);
+                    if (!res.ok) throw new Error('Query failed');
+
+                    const data = await res.json();
+                    this.updateChart(data);
+                } catch (e) {
+                    console.error('Drill-down error:', e);
+                } finally {
+                    this.loading = false;
+                }
+            },
+
+            updateChart(data) {
+                const ctx = document.getElementById('drillDownChart');
+                if (!ctx) return;
+
+                // Destroy existing chart if it exists
+                if (this.chart) {
+                    this.chart.destroy();
+                }
+
+                // Colors
+                const colors = [
+                    '#4a5d23', // Olive
+                    '#8b9a4b', // Light Olive
+                    '#c4b896', // Sand
+                    '#d4a574', // Tan
+                    '#eab308', // Yellow
+                    '#f59e0b', // Amber
+                    '#ef4444', // Red
+                    '#3b82f6', // Blue
+                    '#6b7280', // Gray
+                    '#1f2937'  // Dark Gray
+                ];
+
+                const formatLabel = (str) => {
+                    // Clean up labels (e.g. remove "dm/")
+                    return str.replace('dm/', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                };
+
+                this.chart = new Chart(ctx, {
+                    type: 'bar', // Default to bar, could be dynamic
+                    data: {
+                        labels: data.map(d => formatLabel(d.label)),
+                        datasets: [{
+                            label: this.query.metric.toUpperCase(),
+                            data: data.map(d => d.value),
+                            backgroundColor: data.map((_, i) => colors[i % colors.length]),
+                            borderWidth: 0,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: this.query.dimension === 'player' ? 'y' : 'x', // Flip for players to read names
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => {
+                                        let val = context.raw;
+                                        if (this.query.metric === 'accuracy' || this.query.metric.includes('percent')) {
+                                            return val.toFixed(1) + '%';
+                                        }
+                                        if (this.query.metric === 'kdr') {
+                                            return val.toFixed(2);
+                                        }
+                                        return val.toLocaleString();
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { color: '#9ca3af' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#9ca3af' }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+</script>
+{{end}}

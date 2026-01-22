@@ -1,0 +1,231 @@
+{{define "content"}}
+<div x-data="maps()" x-init="init()">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold">Maps</h1>
+        <p class="text-gray-400">Statistics and heatmaps for all maps</p>
+    </div>
+
+    <!-- Map Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {{range .Maps}}
+        <a href="/maps/{{.ID}}" class="group bg-gray-800/50 rounded-lg border border-gray-700 overflow-hidden hover:border-mohaa-olive transition">
+            <div class="aspect-video bg-gray-900 relative"
+                 style="background-image: url('/static/maps/{{.ID}}_thumb.jpg'); background-size: cover; background-position: center;">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                <div class="absolute bottom-0 left-0 right-0 p-4">
+                    <h3 class="text-lg font-semibold group-hover:text-mohaa-sand transition">{{.Name}}</h3>
+                    <div class="flex items-center space-x-4 text-sm text-gray-400">
+                        <span>{{.TotalMatches}} matches</span>
+                        <span>{{.TotalKills}} kills</span>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4">
+                <div class="grid grid-cols-3 gap-2 text-center text-sm">
+                    <div>
+                        <div class="font-bold text-mohaa-sand">{{.PopularWeapon}}</div>
+                        <div class="text-xs text-gray-400">Top Weapon</div>
+                    </div>
+                    <div>
+                        <div class="font-bold text-mohaa-sand">{{printf "%.1f" .AvgKillDistance}}m</div>
+                        <div class="text-xs text-gray-400">Avg Distance</div>
+                    </div>
+                    <div>
+                        <div class="font-bold text-yellow-400">{{printf "%.1f%%" .HSPercent}}</div>
+                        <div class="text-xs text-gray-400">HS Rate</div>
+                    </div>
+                </div>
+            </div>
+        </a>
+        {{end}}
+    </div>
+
+    <!-- Selected Map Details (shown when URL includes map ID) -->
+    {{if .SelectedMap}}
+    <div class="mt-8 pt-8 border-t border-gray-700">
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- Map Overview -->
+            <div class="lg:w-2/3">
+                <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold">{{.SelectedMap.Name}} - Heatmap</h2>
+                        <div class="flex space-x-2">
+                            <button @click="mapHeatmapType = 'kills'" 
+                                    :class="mapHeatmapType === 'kills' ? 'bg-green-700' : 'bg-gray-700'"
+                                    class="px-3 py-1 text-sm rounded transition">Kills</button>
+                            <button @click="mapHeatmapType = 'deaths'" 
+                                    :class="mapHeatmapType === 'deaths' ? 'bg-red-700' : 'bg-gray-700'"
+                                    class="px-3 py-1 text-sm rounded transition">Deaths</button>
+                        </div>
+                    </div>
+                    
+                    <div class="relative aspect-video bg-gray-900 rounded-lg overflow-hidden"
+                         style="background-image: url('/static/maps/{{.SelectedMap.ID}}_overview.jpg'); background-size: cover;">
+                        <canvas id="mapHeatmapCanvas" class="absolute inset-0 w-full h-full"></canvas>
+                        
+                        <!-- Hotspots overlay -->
+                        <template x-for="spot in hotspots" :key="spot.id">
+                            <div class="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
+                                 :style="`left: ${spot.x}%; top: ${spot.y}%`">
+                                <div class="w-8 h-8 rounded-full animate-pulse"
+                                     :class="spot.type === 'danger' ? 'bg-red-500/50' : 'bg-green-500/50'"></div>
+                                <div class="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black/90 rounded text-xs whitespace-nowrap">
+                                    <span x-text="spot.label"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- Legend -->
+                    <div class="flex items-center justify-center mt-4 space-x-6 text-sm">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 rounded bg-gradient-to-r from-blue-500 to-green-500"></div>
+                            <span class="text-gray-400">Low Activity</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-4 h-4 rounded bg-gradient-to-r from-yellow-500 to-red-500"></div>
+                            <span class="text-gray-400">High Activity</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Map Stats -->
+            <div class="lg:w-1/3 space-y-4">
+                <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+                    <h3 class="text-lg font-semibold mb-4">Map Statistics</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Total Matches</span>
+                            <span class="font-bold">{{.SelectedMap.TotalMatches | formatNumber}}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Total Kills</span>
+                            <span class="font-bold">{{.SelectedMap.TotalKills | formatNumber}}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Avg Match Duration</span>
+                            <span class="font-bold">{{.SelectedMap.AvgDuration | formatDuration}}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Avg Players/Match</span>
+                            <span class="font-bold">{{printf "%.1f" .SelectedMap.AvgPlayers}}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Headshot Rate</span>
+                            <span class="font-bold text-yellow-400">{{printf "%.1f%%" .SelectedMap.HSPercent}}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+                    <h3 class="text-lg font-semibold mb-4">Top Weapons</h3>
+                    <div class="space-y-2">
+                        {{range $i, $w := .SelectedMap.TopWeapons}}
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-gray-500 text-sm">{{add $i 1}}.</span>
+                                <span>{{$w.Name}}</span>
+                            </div>
+                            <span class="text-sm text-gray-400">{{$w.Kills}} kills</span>
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+
+                <div class="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+                    <h3 class="text-lg font-semibold mb-4">Hotspots</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                                <span>Most Dangerous Zone</span>
+                            </div>
+                            <span class="text-gray-400">MG Bunker</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                                <span>Most Kills From</span>
+                            </div>
+                            <span class="text-gray-400">Church Tower</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{end}}
+</div>
+
+<script>
+function maps() {
+    return {
+        mapHeatmapType: 'kills',
+        hotspots: [
+            { id: 1, x: 35, y: 45, type: 'danger', label: 'MG Bunker - 2,450 deaths' },
+            { id: 2, x: 65, y: 30, type: 'kills', label: 'Church Tower - 3,200 kills' },
+            { id: 3, x: 50, y: 70, type: 'danger', label: 'Beach Approach - 1,890 deaths' }
+        ],
+
+        init() {
+            this.$watch('mapHeatmapType', () => this.renderHeatmap());
+            
+            {{if .SelectedMap}}
+            this.$nextTick(() => this.renderHeatmap());
+            {{end}}
+        },
+
+        async renderHeatmap() {
+            const canvas = document.getElementById('mapHeatmapCanvas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            // Clear
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Fetch heatmap data
+            try {
+                const mapId = '{{if .SelectedMap}}{{.SelectedMap.ID}}{{end}}';
+                const res = await fetch(`/api/v1/stats/map/${mapId}/heatmap?type=${this.mapHeatmapType}`);
+                const data = await res.json();
+                
+                this.drawHeatmap(ctx, canvas, data.points);
+            } catch (e) {
+                // Demo heatmap
+                const demoPoints = Array.from({length: 100}, () => ({
+                    x: Math.random(),
+                    y: Math.random(),
+                    count: Math.floor(Math.random() * 50) + 1
+                }));
+                this.drawHeatmap(ctx, canvas, demoPoints);
+            }
+        },
+
+        drawHeatmap(ctx, canvas, points) {
+            const isKills = this.mapHeatmapType === 'kills';
+            const color = isKills ? [74, 222, 128] : [239, 68, 68];
+            
+            points.forEach(p => {
+                const x = p.x * canvas.width;
+                const y = p.y * canvas.height;
+                const radius = Math.min(30, p.count * 2);
+                
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+                gradient.addColorStop(0, `rgba(${color.join(',')}, 0.6)`);
+                gradient.addColorStop(1, `rgba(${color.join(',')}, 0)`);
+                
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            });
+        }
+    }
+}
+</script>
+{{end}}

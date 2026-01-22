@@ -1,0 +1,20 @@
+<!-- Leaderboard Partial - For sidebar/widget use -->
+<div class="space-y-2">
+    {{range $i, $p := .Players}}
+    <a href="/player/{{$p.GUID}}" class="flex items-center justify-between p-2 rounded hover:bg-gray-700/50 transition">
+        <div class="flex items-center space-x-3">
+            <span class="font-bold w-6 text-center
+                {{if eq $i 0}}text-yellow-400
+                {{else if eq $i 1}}text-gray-300
+                {{else if eq $i 2}}text-amber-600
+                {{else}}text-gray-500{{end}}">#{{add $i 1}}</span>
+            <span class="font-medium truncate max-w-[100px]">{{$p.Name}}</span>
+        </div>
+        <span class="text-sm text-mohaa-sand">{{$p.Value | formatNumber}}</span>
+    </a>
+    {{end}}
+</div>
+
+<div class="mt-4 pt-4 border-t border-gray-700 text-center">
+    <a href="/leaderboard" class="text-sm text-mohaa-sand hover:underline">View Full Leaderboard →</a>
+</div>

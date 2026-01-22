@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Link Identity</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        button { padding: 10px 20px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h1>Link Your SMF Account to Game Identity</h1>
+    <p>Click the button below to link your SMF account (elgan, ID: 1) to your game GUID.</p>
+    <p><strong>GUID:</strong> 72750883-29ae-4377-85c4-9367f1f89d1a</p>
+    
+    <button onclick="linkIdentity()">Link Identity</button>
+    
+    <div id="result"></div>
+    
+    <script>
+    async function linkIdentity() {
+        const result = document.getElementById('result');
+        result.innerHTML = 'Processing...';
+        
+        try {
+            // Use the SMF forum's database by making a request to the link endpoint
+            const response = await fetch('http://localhost:8888/index.php?action=mohaaplayers;sa=link_ajax', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    smf_member_id: 1,
+                    player_guid: '72750883-29ae-4377-85c4-9367f1f89d1a',
+                    player_name: 'elgan'
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                result.innerHTML = '<p class="success">✓ Successfully linked!</p>';
+                setTimeout(() => {
+                    window.location.href = 'http://localhost:8888/index.php?action=mohaadashboard';
+                }, 1500);
+            } else {
+                result.innerHTML = '<p class="error">✗ Failed: ' + (data.error || 'Unknown error') + '</p>';
+            }
+        } catch (e) {
+            result.innerHTML = '<p class="error">✗ Error: ' + e.message + '</p>';
+        }
+    }
+    </script>
+</body>
+</html>

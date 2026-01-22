@@ -1,0 +1,32 @@
+<!-- Live Matches Partial - Loaded via HTMX -->
+{{if .LiveMatches}}
+<div class="space-y-2">
+    {{range .LiveMatches}}
+    <a href="/match/{{.ID}}" class="block bg-gray-800/50 rounded-lg border border-gray-700 p-4 hover:border-mohaa-olive transition">
+        <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-2">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span class="font-semibold">{{.ServerName}}</span>
+            </div>
+            <span class="text-xs text-gray-400">{{.Duration | formatDuration}}</span>
+        </div>
+        <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-400">{{.MapName}} • {{.GameMode}}</span>
+            <span class="text-mohaa-sand">{{.PlayerCount}}/{{.MaxPlayers}} players</span>
+        </div>
+        {{if .TeamMatch}}
+        <div class="flex items-center justify-center space-x-4 mt-2 pt-2 border-t border-gray-700">
+            <span class="text-blue-400 font-bold">{{.AlliesScore}}</span>
+            <span class="text-gray-500">vs</span>
+            <span class="text-red-400 font-bold">{{.AxisScore}}</span>
+        </div>
+        {{end}}
+    </a>
+    {{end}}
+</div>
+{{else}}
+<div class="text-center py-8 text-gray-500">
+    <p>No live matches at the moment</p>
+    <p class="text-sm mt-1">Check back soon!</p>
+</div>
+{{end}}
