@@ -23,7 +23,7 @@ docker compose up -d
 ```
 
 ### 3. Complete SMF Installation
-1. Open: http://77.42.64.214:8888/install.php
+1. Open: http://77.42.64.214:8083/install.php
 2. Database settings:
    - Host: `smf-mysql`
    - User: `smf`
@@ -44,15 +44,15 @@ INSERT INTO smf_settings (variable, value) VALUES
 ('integrate_menu_buttons', 'MohaaStats_MenuButtons'),
 ('integrate_admin_areas', 'MohaaStats_AdminAreas'),
 ('mohaa_stats_enabled', '1'),
-('mohaa_stats_api_url', 'http://mohaa-api:8080');
+('mohaa_stats_api_url', 'http://mohaa-api:8084');
 ```
 
 ## Ports
 
 | Service | Port | URL |
 |---------|------|-----|
-| SMF Forum | 8888 | http://77.42.64.214:8888 |
-| API | 8080 | http://77.42.64.214:8080 |
+| SMF Forum | 8083 | http://77.42.64.214:8083 |
+| API | 8084 | http://77.42.64.214:8084 |
 | phpMyAdmin | 8889 | http://77.42.64.214:8889 |
 | MySQL | 3307 | Internal only |
 
@@ -70,8 +70,8 @@ MYSQL_ROOT_PASSWORD=your_root_password
 SMF_DB_NAME=smf
 SMF_DB_USER=smf
 SMF_DB_PASS=your_smf_password
-MOHAA_API_URL=http://mohaa-api:8080/api/v1
-MOHAA_API_PUBLIC_URL=http://77.42.64.214:8080/api/v1
+MOHAA_API_URL=http://mohaa-api:8084/api/v1
+MOHAA_API_PUBLIC_URL=http://77.42.64.214:8084/api/v1
 ```
 
 ## Plugin Files

@@ -19,7 +19,7 @@ services:
       - "com.mohaa.service=smf"
       - "com.mohaa.description=SMF Forum with MOHAA Stats Plugin"
     ports:
-      - "8888:80"
+      - "8083:80"
     environment:
       # SMF Database
       - SMF_DB_HOST=smf-mysql
@@ -27,8 +27,8 @@ services:
       - SMF_DB_USER=${SMF_DB_USER:-smf}
       - SMF_DB_PASS=${SMF_DB_PASS:-smf_password}
       # MOHAA Stats API Connection
-      - MOHAA_API_URL=${MOHAA_API_URL:-http://mohaa-api:8080/api/v1}
-      - MOHAA_API_PUBLIC_URL=${MOHAA_API_PUBLIC_URL:-http://77.42.64.214:8080/api/v1}
+      - MOHAA_API_URL=${MOHAA_API_URL:-http://mohaa-api:8084/api/v1}
+      - MOHAA_API_PUBLIC_URL=${MOHAA_API_PUBLIC_URL:-http://77.42.64.214:8084/api/v1}
     volumes:
       - smf-attachments:/var/www/html/attachments
       - smf-avatars:/var/www/html/avatars
