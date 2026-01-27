@@ -27,7 +27,7 @@ services:
       - SMF_DB_USER=${SMF_DB_USER:-smf}
       - SMF_DB_PASS=${SMF_DB_PASS:-smf_password}
       # MOHAA Stats API Connection
-      - MOHAA_API_URL=${MOHAA_API_URL:-http://mohaa-api:8084/api/v1}
+      - MOHAA_API_URL=${MOHAA_API_URL:-http://77.42.64.214:8084/api/v1}
       - MOHAA_API_PUBLIC_URL=${MOHAA_API_PUBLIC_URL:-http://77.42.64.214:8084/api/v1}
     volumes:
       - smf-attachments:/var/www/html/attachments
@@ -99,5 +99,4 @@ volumes:
 
 networks:
   mohaa-network:
-    external: true
-    name: opm-stats-api_mohaa-network
+    driver: bridge
