@@ -4,6 +4,7 @@ set -e
 CONFIG_DIR="/var/www/html/smf-config"
 SETTINGS_FILE="/var/www/html/Settings.php"
 SETTINGS_BAK="/var/www/html/Settings_bak.php"
+SETTINGS_TEMPLATE="/var/www/html/Settings.php.template"
 
 # Ensure config directory exists with proper permissions
 mkdir -p "$CONFIG_DIR"
@@ -19,14 +20,49 @@ if [ -f "$CONFIG_DIR/Settings.php" ] && grep -q "db_server" "$CONFIG_DIR/Setting
     chown www-data:www-data "$SETTINGS_FILE" "$SETTINGS_BAK" 2>/dev/null || true
     echo "[entrypoint] Settings restored successfully."
 
-# PRIORITY 2: If Settings.php exists locally (from previous install), backup to volume
+# PRIORITY 2: Use template if available (SKIP SMF Installer!)
+elif [ -f "$SETTINGS_TEMPLATE" ]; then
+    echo "[entrypoint] Creating Settings.php from template (skipping SMF installer)..."
+    cp "$SETTINGS_TEMPLATE" "$SETTINGS_FILE"
+    
+    # Generate auth_secret if empty
+    AUTH_SECRET=$(openssl rand -hex 32)
+    sed -i "s|\$auth_secret = '';|\$auth_secret = '$AUTH_SECRET';|" "$SETTINGS_FILE"
+    
+    chmod 666 "$SETTINGS_FILE"
+    chown www-data:www-data "$SETTINGS_FILE"
+    
+    # Save to volume
+    cp "$SETTINGS_FILE" "$CONFIG_DIR/Settings.php"
+    echo "[entrypoint] Settings.php created from template!"
+    
+    # Wait for MySQL and run SMF table creation
+    echo "[entrypoint] Waiting for MySQL to be ready..."
+    for i in {1..30}; do
+        if php -r "
+            \$conn = @new mysqli('${SMF_DB_SERVER:-dev-smf-mysql}', '${SMF_DB_USER:-smf}', '${SMF_DB_PASS:-smf_password}', '${SMF_DB_NAME:-smf}');
+            if (\$conn->connect_error) exit(1);
+            echo 'MySQL ready';
+            exit(0);
+        " 2>/dev/null; then
+            break
+        fi
+        echo "[entrypoint] Waiting for MySQL... ($i/30)"
+        sleep 2
+    done
+    
+    # Create SMF core tables via install.php API
+    echo "[entrypoint] Creating SMF core tables..."
+    php /var/www/html/install_smf_tables.php 2>&1 || echo "[entrypoint] SMF tables may already exist"
+    
+# PRIORITY 3: If Settings.php exists locally (from previous install), backup to volume
 elif [ -f "$SETTINGS_FILE" ] && grep -q "db_server" "$SETTINGS_FILE" 2>/dev/null; then
     echo "[entrypoint] Found local Settings.php, backing up to volume..."
     cp "$SETTINGS_FILE" "$CONFIG_DIR/Settings.php"
     [ -f "$SETTINGS_BAK" ] && cp "$SETTINGS_BAK" "$CONFIG_DIR/Settings_bak.php"
     echo "[entrypoint] Settings backed up to volume."
 
-# PRIORITY 3: Fresh install needed
+# PRIORITY 4: Fresh install needed
 else
     echo "[entrypoint] No configured Settings.php found."
     echo "[entrypoint] Run SMF installer at /install.php"
