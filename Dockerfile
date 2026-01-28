@@ -54,13 +54,18 @@ RUN mkdir -p /var/www/html/cache \
     /var/www/html/avatars \
     /var/www/html/custom_avatar \
     /var/www/html/Packages \
+    /var/www/html/smf-config \
     && chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod 777 /var/www/html/cache \
     && chmod 777 /var/www/html/attachments \
     && chmod 777 /var/www/html/avatars \
     && chmod 777 /var/www/html/custom_avatar \
-    && chmod 777 /var/www/html/Packages
+    && chmod 777 /var/www/html/Packages \
+    && chmod 777 /var/www/html/smf-config \
+    && touch /var/www/html/Settings.php /var/www/html/Settings_bak.php \
+    && chmod 666 /var/www/html/Settings.php /var/www/html/Settings_bak.php \
+    && chown www-data:www-data /var/www/html/Settings.php /var/www/html/Settings_bak.php
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
