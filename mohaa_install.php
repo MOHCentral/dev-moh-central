@@ -137,13 +137,7 @@ if (is_dir($config_dir)) {
         if (file_exists(__DIR__ . '/Settings_bak.php')) {
             copy(__DIR__ . '/Settings_bak.php', $config_dir . '/Settings_bak.php');
         }
-        // Create symlinks
-        unlink(__DIR__ . '/Settings.php');
-        symlink($config_dir . '/Settings.php', __DIR__ . '/Settings.php');
-        if (file_exists(__DIR__ . '/Settings_bak.php')) {
-            unlink(__DIR__ . '/Settings_bak.php');
-            symlink($config_dir . '/Settings_bak.php', __DIR__ . '/Settings_bak.php');
-        }
+        echo '<li>Settings.php backed up to persistent volume</li>';
     }
 }
 

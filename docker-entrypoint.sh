@@ -9,31 +9,23 @@ SETTINGS_BWC="/var/www/html/Settings_bak.php"
 mkdir -p "$CONFIG_DIR"
 chown www-data:www-data "$CONFIG_DIR"
 
-# ALWAYS ensure Settings files are writable (for installer)
-chmod 666 "$SETTINGS_FILE" 2>/dev/null || true
-chmod 666 "$SETTINGS_BWC" 2>/dev/null || true
-chown www-data:www-data "$SETTINGS_FILE" 2>/dev/null || true
-chown www-data:www-data "$SETTINGS_BWC" 2>/dev/null || true
-
-# If Settings.php exists in the persistent volume, symlink it
-if [ -f "$CONFIG_DIR/Settings.php" ]; then
-    echo "Found persisted Settings.php, linking..."
-    rm -f "$SETTINGS_FILE" "$SETTINGS_BWC"
-    ln -sf "$CONFIG_DIR/Settings.php" "$SETTINGS_FILE"
+# If Settings.php exists in the persistent volume and is configured, restore it
+if [ -f "$CONFIG_DIR/Settings.php" ] && grep -q "db_server" "$CONFIG_DIR/Settings.php" 2>/dev/null; then
+    echo "Found persisted Settings.php, restoring..."
+    cp "$CONFIG_DIR/Settings.php" "$SETTINGS_FILE"
     if [ -f "$CONFIG_DIR/Settings_bak.php" ]; then
-        ln -sf "$CONFIG_DIR/Settings_bak.php" "$SETTINGS_BWC"
+        cp "$CONFIG_DIR/Settings_bak.php" "$SETTINGS_BWC"
     fi
-# If Settings.php exists locally (just installed), copy to volume
-elif [ -f "$SETTINGS_FILE" ] && [ ! -L "$SETTINGS_FILE" ]; then
-    echo "Copying Settings.php to persistent volume..."
-    cp "$SETTINGS_FILE" "$CONFIG_DIR/Settings.php"
-    if [ -f "$SETTINGS_BWC" ]; then
-        cp "$SETTINGS_BWC" "$CONFIG_DIR/Settings_bak.php"
-    fi
-    ln -sf "$CONFIG_DIR/Settings.php" "$SETTINGS_FILE"
+    chmod 666 "$SETTINGS_FILE" "$SETTINGS_BWC"
+    chown www-data:www-data "$SETTINGS_FILE" "$SETTINGS_BWC"
+    echo "Settings restored from volume."
 else
-    echo "Settings.php not found - run SMF installer at /install.php"
-    echo "After installation, settings will be persisted across container rebuilds."
+    echo "No persisted Settings.php found - run SMF installer at /install.php"
+    # Ensure files are writable for installer
+    chmod 666 "$SETTINGS_FILE" 2>/dev/null || true
+    chmod 666 "$SETTINGS_BWC" 2>/dev/null || true
+    chown www-data:www-data "$SETTINGS_FILE" 2>/dev/null || true
+    chown www-data:www-data "$SETTINGS_BWC" 2>/dev/null || true
 fi
 
 # Start Apache
