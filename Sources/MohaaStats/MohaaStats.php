@@ -379,7 +379,10 @@ function MohaaStats_MainPage(): void
 {
     global $context, $txt;
     
-    $context['page_title'] = $txt['mohaa_stats'];
+    loadLanguage('MohaaStats');
+    loadTemplate('MohaaStats');
+    
+    $context['page_title'] = $txt['mohaa_stats'] ?? 'MOHAA Stats';
     $context['sub_template'] = 'mohaa_stats_main';
     
     // Fetch dashboard data
