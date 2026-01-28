@@ -1,6 +1,13 @@
 # =============================================================================
 # SMF Forum with MOHAA Stats Plugin
 # =============================================================================
+
+# Stage 1: Pull the latest MOHAA Stats Integration Plugin
+FROM alpine/git AS plugin-stage
+WORKDIR /plugins
+RUN git clone https://github.com/MOHCentral/opm-stats-smf-integration.git .
+
+# Stage 2: Final Image
 FROM php:8.2-apache
 
 # Install PHP extensions required by SMF
@@ -12,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     libicu-dev \
     libonig-dev \
     curl \
+    git \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
         gd \
@@ -47,6 +55,11 @@ WORKDIR /var/www/html
 
 # Copy SMF files
 COPY --chown=www-data:www-data . /var/www/html/
+
+# Copy MOHAA Stats Plugin files from stage 1
+COPY --from=plugin-stage --chown=www-data:www-data /plugins/smf-mohaa/Sources/. /var/www/html/Sources/
+COPY --from=plugin-stage --chown=www-data:www-data /plugins/smf-mohaa/Themes/. /var/www/html/Themes/
+COPY --from=plugin-stage --chown=www-data:www-data /plugins/smf-mohaa/install/mohaa_master_install.php /var/www/html/mohaa_install.php
 
 # Create required directories with proper permissions
 RUN mkdir -p /var/www/html/cache \

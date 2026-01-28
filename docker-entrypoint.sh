@@ -35,6 +35,29 @@ else
     chown www-data:www-data "$SETTINGS_FILE" "$SETTINGS_BAK" 2>/dev/null || true
 fi
 
+# MOHAA Stats Plugin Auto-Installation
+if [ -f "$SETTINGS_FILE" ] && grep -q "db_server" "$SETTINGS_FILE" 2>/dev/null; then
+    if [ -f "/var/www/html/mohaa_install.php" ]; then
+        echo "[entrypoint] Scheduling MOHAA Stats Plugin auto-install..."
+        (
+            # Wait for Apache and MySQL to be ready
+            sleep 15
+            # Patch the installer to ensure db_create_table and db_insert are registered
+            # (Required because standalone installer doesn't load all SMF extensions)
+            sed -i "/require_once(\$path);/a \        require_once('/var/www/html/Sources/DbPackages-mysql.php');\n        db_packages_init();\n        global \$smcFunc;\n        \$smcFunc['db_create_table'] = 'smf_db_create_table';\n        \$smcFunc['db_insert'] = 'smf_db_insert';" /var/www/html/mohaa_install.php
+            
+            php /var/www/html/mohaa_install.php > /tmp/plugin_install.log 2>&1
+            if [ $? -eq 0 ]; then
+                echo "[plugin-auto-install] ✓ Plugin installation/check completed."
+            else
+                echo "[plugin-auto-install] ✗ Plugin installation failed. Check /tmp/plugin_install.log"
+            fi
+        ) &
+    fi
+fi
+
+echo "[entrypoint] Starting Apache..."
+
 # Auto-backup Settings.php if it was created but not yet saved to volume
 # (This runs every 60 seconds in the background to catch new installations)
 (
