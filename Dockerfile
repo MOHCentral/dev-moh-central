@@ -5,7 +5,9 @@
 # Stage 1: Pull the latest MOHAA Stats Integration Plugin
 FROM alpine/git AS plugin-stage
 WORKDIR /plugins
-RUN git clone https://github.com/MOHCentral/opm-stats-smf-integration.git .
+# Cache-bust ARG - change value or use --build-arg CACHEBUST=$(date +%s) to force fresh clone
+ARG CACHEBUST=1
+RUN echo "Cache bust: $CACHEBUST" && git clone https://github.com/MOHCentral/opm-stats-smf-integration.git .
 
 # Stage 2: Final Image
 FROM php:8.2-apache
