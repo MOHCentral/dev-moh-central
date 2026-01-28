@@ -62,7 +62,6 @@ COPY --chown=www-data:www-data . /var/www/html/
 COPY --from=plugin-stage --chown=www-data:www-data /plugins/smf-mohaa/Sources/. /var/www/html/Sources/
 COPY --from=plugin-stage --chown=www-data:www-data /plugins/smf-mohaa/Themes/. /var/www/html/Themes/
 COPY --from=plugin-stage --chown=www-data:www-data /plugins/smf-mohaa/install/mohaa_master_install.php /var/www/html/mohaa_install.php
-COPY --from=plugin-stage --chown=www-data:www-data /plugins/smf-mohaa/install/migration_fix_schema.sql /var/www/html/migration_fix_schema.sql
 
 # Create required directories with proper permissions
 RUN mkdir -p /var/www/html/cache \
