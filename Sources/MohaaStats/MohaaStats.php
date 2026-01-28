@@ -18,6 +18,104 @@ if (!defined('SMF'))
 // Load the API client class
 require_once(__DIR__ . '/MohaaStatsAPI.php');
 
+// Auto-install hooks if missing (runs once on first load)
+MohaaStats_AutoInstall();
+
+/**
+ * Auto-install hooks if they are missing
+ * This ensures the plugin works on fresh deployments
+ */
+function MohaaStats_AutoInstall(): void
+{
+    global $smcFunc, $modSettings;
+    
+    // Skip if already installed
+    if (!empty($modSettings['mohaa_stats_installed']))
+        return;
+    
+    // Check if smf_settings table exists (SMF installed)
+    $request = $smcFunc['db_query']('', '
+        SELECT COUNT(*) FROM {db_prefix}settings WHERE variable = {string:var}',
+        ['var' => 'mohaa_stats_enabled']
+    );
+    
+    if (!$request)
+        return; // SMF not installed yet
+    
+    list($exists) = $smcFunc['db_fetch_row']($request);
+    $smcFunc['db_free_result']($request);
+    
+    // Register hooks if not present
+    $hooks = [
+        'integrate_pre_include' => '$sourcedir/MohaaStats/MohaaStats.php',
+        'integrate_actions' => 'MohaaStats_Actions',
+        'integrate_menu_buttons' => 'MohaaStats_MenuButtons',
+        'integrate_admin_areas' => 'MohaaStats_AdminAreas',
+    ];
+    
+    foreach ($hooks as $hook => $function) {
+        add_integration_function($hook, $function, true);
+    }
+    
+    // Set default settings
+    $settings = [
+        'mohaa_stats_installed' => 1,
+        'mohaa_stats_enabled' => 1,
+        'mohaa_stats_api_url' => 'http://77.42.64.214:8084/api/v1',
+    ];
+    
+    updateSettings($settings);
+    
+    // Create plugin tables if missing
+    MohaaStats_CreateTables();
+}
+
+/**
+ * Create plugin tables if they don't exist
+ */
+function MohaaStats_CreateTables(): void
+{
+    global $smcFunc;
+    
+    $tables = [
+        'mohaa_identities' => "
+            CREATE TABLE IF NOT EXISTS {db_prefix}mohaa_identities (
+                id_identity INT AUTO_INCREMENT PRIMARY KEY,
+                id_member INT NOT NULL,
+                player_guid VARCHAR(64) NOT NULL UNIQUE,
+                player_name VARCHAR(100),
+                linked_date INT UNSIGNED DEFAULT 0,
+                verified TINYINT(1) DEFAULT 0,
+                INDEX idx_member (id_member)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'mohaa_claim_codes' => "
+            CREATE TABLE IF NOT EXISTS {db_prefix}mohaa_claim_codes (
+                id_claim INT AUTO_INCREMENT PRIMARY KEY,
+                id_member INT NOT NULL,
+                claim_code VARCHAR(16) NOT NULL UNIQUE,
+                created_at INT UNSIGNED DEFAULT 0,
+                expires_at INT UNSIGNED DEFAULT 0,
+                used TINYINT(1) DEFAULT 0,
+                INDEX idx_member (id_member)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'mohaa_device_tokens' => "
+            CREATE TABLE IF NOT EXISTS {db_prefix}mohaa_device_tokens (
+                id_token INT AUTO_INCREMENT PRIMARY KEY,
+                id_member INT NOT NULL,
+                user_code VARCHAR(16) NOT NULL UNIQUE,
+                device_code VARCHAR(64),
+                created_at INT UNSIGNED DEFAULT 0,
+                expires_at INT UNSIGNED DEFAULT 0,
+                verified TINYINT(1) DEFAULT 0,
+                INDEX idx_device (device_code)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+    ];
+    
+    foreach ($tables as $sql) {
+        $smcFunc['db_query']('', str_replace('{db_prefix}', '{db_prefix}', $sql), []);
+    }
+}
+
 /**
  * Register actions (URL routes)
  */

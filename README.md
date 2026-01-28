@@ -31,21 +31,10 @@ docker compose up -d
    - Database: `smf`
 3. Complete wizard, delete install.php
 
-### 4. Install MOHAA Plugin Tables
-```bash
-docker exec -i mohaa-smf-mysql mysql -u smf -p smf < /docker-entrypoint-initdb.d/01_mohaa_tables.sql
-```
-
-### 5. Register Plugin Hooks
-Go to Admin → Configuration → Server Settings → Database and run:
-```sql
-INSERT INTO smf_settings (variable, value) VALUES 
-('integrate_actions', 'MohaaStats_Actions'),
-('integrate_menu_buttons', 'MohaaStats_MenuButtons'),
-('integrate_admin_areas', 'MohaaStats_AdminAreas'),
-('mohaa_stats_enabled', '1'),
-('mohaa_stats_api_url', 'http://mohaa-api:8084');
-```
+### 4. Install MOHAA Stats Plugin
+1. Open: http://77.42.64.214:8083/mohaa_install.php
+2. Wait for success message
+3. **Delete the installer**: Access container and run `rm /var/www/html/mohaa_install.php`
 
 ## Ports
 
