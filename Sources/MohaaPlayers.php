@@ -887,7 +887,7 @@ function MohaaPlayers_IdentityPage(): void
     $smcFunc['db_free_result']($request);
     
     // Get or create claim code via API
-    require_once(__DIR__ . '/MohaaStats/MohaaStatsAPIClient.php');
+    require_once(__DIR__ . '/MohaaStats/MohaaStatsAPI.php');
     $api = new MohaaStatsAPIClient();
     $result = $api->initClaim($user_info['id']);
     $context['mohaa_claim_code'] = $result['code'] ?? strtoupper(substr(md5($user_info['id'] . time()), 0, 8));
