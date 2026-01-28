@@ -131,13 +131,15 @@ if (is_dir($cache_dir)) {
 
 // Persist Settings.php to volume so it survives container rebuilds
 $config_dir = __DIR__ . '/smf-config';
-if (is_dir($config_dir)) {
-    if (file_exists(__DIR__ . '/Settings.php') && !is_link(__DIR__ . '/Settings.php')) {
-        copy(__DIR__ . '/Settings.php', $config_dir . '/Settings.php');
-        if (file_exists(__DIR__ . '/Settings_bak.php')) {
-            copy(__DIR__ . '/Settings_bak.php', $config_dir . '/Settings_bak.php');
-        }
+if (!is_dir($config_dir)) {
+    @mkdir($config_dir, 0777, true);
+}
+if (file_exists(__DIR__ . '/Settings.php') && !is_link(__DIR__ . '/Settings.php')) {
+    if (copy(__DIR__ . '/Settings.php', $config_dir . '/Settings.php')) {
         echo '<li>Settings.php backed up to persistent volume</li>';
+    }
+    if (file_exists(__DIR__ . '/Settings_bak.php')) {
+        copy(__DIR__ . '/Settings_bak.php', $config_dir . '/Settings_bak.php');
     }
 }
 
