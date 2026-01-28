@@ -42,7 +42,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - dev-smf-network
+      - opm-stats-network
 
   # ============================================================================
   # MySQL for SMF Forum
@@ -70,7 +70,7 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - dev-smf-network
+      - opm-stats-network
 
   # ============================================================================
   # phpMyAdmin (optional, for database management)
@@ -91,7 +91,7 @@ services:
       - dev-smf-mysql
     restart: unless-stopped
     networks:
-      - dev-smf-network
+      - opm-stats-network
 
 volumes:
   dev-smf-mysql-data:
@@ -102,5 +102,6 @@ volumes:
   dev-smf-packages:
 
 networks:
-  dev-smf-network:
-    driver: bridge
+  opm-stats-network:
+    external: true
+    name: opm-stats-network
