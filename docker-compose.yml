@@ -30,6 +30,7 @@ services:
       - MOHAA_API_URL=${MOHAA_API_URL:-http://77.42.64.214:8084/api/v1}
       - MOHAA_API_PUBLIC_URL=${MOHAA_API_PUBLIC_URL:-http://77.42.64.214:8084/api/v1}
     volumes:
+      - smf-settings:/var/www/html/smf-config
       - smf-attachments:/var/www/html/attachments
       - smf-avatars:/var/www/html/avatars
       - smf-cache:/var/www/html/cache
@@ -92,6 +93,7 @@ services:
 
 volumes:
   smf-mysql-data:
+  smf-settings:
   smf-attachments:
   smf-avatars:
   smf-cache:
