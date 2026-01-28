@@ -9,20 +9,20 @@ services:
   # ============================================================================
   # SMF Forum with MOHAA Stats Plugin
   # ============================================================================
-  smf:
+  dev-smf:
     build:
       context: .
       dockerfile: Dockerfile
-    image: mohaa-stats-smf:latest
-    container_name: mohaa-smf
+    image: dev-smf:latest
+    container_name: dev-smf
     labels:
-      - "com.mohaa.service=smf"
+      - "com.mohaa.service=dev-smf"
       - "com.mohaa.description=SMF Forum with MOHAA Stats Plugin"
     ports:
       - "8083:80"
     environment:
       # SMF Database
-      - SMF_DB_HOST=smf-mysql
+      - SMF_DB_HOST=dev-smf-mysql
       - SMF_DB_NAME=${SMF_DB_NAME}
       - SMF_DB_USER=${SMF_DB_USER}
       - SMF_DB_PASS=${SMF_DB_PASS}
@@ -30,24 +30,24 @@ services:
       - MOHAA_API_URL=${MOHAA_API_URL}
       - MOHAA_API_PUBLIC_URL=${MOHAA_API_PUBLIC_URL}
     volumes:
-      - smf-settings:/var/www/html/smf-config
-      - smf-attachments:/var/www/html/attachments
-      - smf-avatars:/var/www/html/avatars
-      - smf-cache:/var/www/html/cache
-      - smf-packages:/var/www/html/Packages
+      - dev-smf-settings:/var/www/html/smf-config
+      - dev-smf-attachments:/var/www/html/attachments
+      - dev-smf-avatars:/var/www/html/avatars
+      - dev-smf-cache:/var/www/html/cache
+      - dev-smf-packages:/var/www/html/Packages
     depends_on:
-      smf-mysql:
+      dev-smf-mysql:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - mohaa-network
+      - dev-smf-network
 
   # ============================================================================
   # MySQL for SMF Forum
   # ============================================================================
-  smf-mysql:
+  dev-smf-mysql:
     image: mysql:8.0
-    container_name: mohaa-smf-mysql
+    container_name: dev-smf-mysql
     labels:
       - "com.mohaa.service=smf-mysql"
       - "com.mohaa.description=MySQL database for SMF Forum"
@@ -59,7 +59,7 @@ services:
     ports:
       - "3307:3306"
     volumes:
-      - smf-mysql-data:/var/lib/mysql
+      - dev-smf-mysql-data:/var/lib/mysql
       - ./init-db:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
@@ -68,7 +68,7 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - mohaa-network
+      - dev-smf-network
 
   # ============================================================================
   # phpMyAdmin (optional, for database management)
@@ -82,23 +82,23 @@ services:
     ports:
       - "8889:80"
     environment:
-      - PMA_HOST=smf-mysql
+      - PMA_HOST=dev-smf-mysql
       - PMA_USER=root
       - PMA_PASSWORD=${MYSQL_ROOT_PASSWORD}
     depends_on:
-      - smf-mysql
+      - dev-smf-mysql
     restart: unless-stopped
     networks:
-      - mohaa-network
+      - dev-smf-network
 
 volumes:
-  smf-mysql-data:
-  smf-settings:
-  smf-attachments:
-  smf-avatars:
-  smf-cache:
-  smf-packages:
+  dev-smf-mysql-data:
+  dev-smf-settings:
+  dev-smf-attachments:
+  dev-smf-avatars:
+  dev-smf-cache:
+  dev-smf-packages:
 
 networks:
-  mohaa-network:
+  dev-smf-network:
     driver: bridge
