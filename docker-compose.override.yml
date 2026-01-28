@@ -17,4 +17,34 @@ services:
       - SMF_DB_PASS=smf_password
       - SMF_URL=http://localhost:8083
     volumes:
-      - ./Themes/default/MohaaStatsLeaderboard.template.php:/var/www/html/Themes/default/MohaaStatsLeaderboard.template.php
+      # Mount MOHAA plugin sources from smf-integration repo
+      - ../opm-stats-smf-integration/smf-mohaa/Sources/MohaaPlayers.php:/var/www/html/Sources/MohaaPlayers.php
+      - ../opm-stats-smf-integration/smf-mohaa/Sources/MohaaTeams.php:/var/www/html/Sources/MohaaTeams.php
+      - ../opm-stats-smf-integration/smf-mohaa/Sources/MohaaAchievements.php:/var/www/html/Sources/MohaaAchievements.php
+      - ../opm-stats-smf-integration/smf-mohaa/Sources/MohaaTournaments.php:/var/www/html/Sources/MohaaTournaments.php
+      - ../opm-stats-smf-integration/smf-mohaa/Sources/MohaaServers.php:/var/www/html/Sources/MohaaServers.php
+      - ../opm-stats-smf-integration/smf-mohaa/Sources/MohaaPredictions.php:/var/www/html/Sources/MohaaPredictions.php
+      - ../opm-stats-smf-integration/smf-mohaa/Sources/MohaaComparison.php:/var/www/html/Sources/MohaaComparison.php
+      - ../opm-stats-smf-integration/smf-mohaa/Sources/MohaaStats:/var/www/html/Sources/MohaaStats
+      # Mount individual templates (NOT the whole directory - that overwrites SMF core templates!)
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaAchievements.template.php:/var/www/html/Themes/default/MohaaAchievements.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaAchievementsEnhanced.template.php:/var/www/html/Themes/default/MohaaAchievementsEnhanced.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaAchievementsWidget.template.php:/var/www/html/Themes/default/MohaaAchievementsWidget.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaBattleDetail.template.php:/var/www/html/Themes/default/MohaaBattleDetail.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaBattlesList.template.php:/var/www/html/Themes/default/MohaaBattlesList.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaDashboard.template.php:/var/www/html/Themes/default/MohaaDashboard.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaIdentity.template.php:/var/www/html/Themes/default/MohaaIdentity.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaPlayerComparison.template.php:/var/www/html/Themes/default/MohaaPlayerComparison.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaPlayers.template.php:/var/www/html/Themes/default/MohaaPlayers.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaPredictions.template.php:/var/www/html/Themes/default/MohaaPredictions.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaRealtimeDashboard.template.php:/var/www/html/Themes/default/MohaaRealtimeDashboard.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaServerStats.template.php:/var/www/html/Themes/default/MohaaServerStats.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaServers.template.php:/var/www/html/Themes/default/MohaaServers.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaStats.template.php:/var/www/html/Themes/default/MohaaStats.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaStatsLeaderboard.template.php:/var/www/html/Themes/default/MohaaStatsLeaderboard.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaStatsMatch.template.php:/var/www/html/Themes/default/MohaaStatsMatch.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaStatsPlayer.template.php:/var/www/html/Themes/default/MohaaStatsPlayer.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaTeams.template.php:/var/www/html/Themes/default/MohaaTeams.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaTournamentEnhanced.template.php:/var/www/html/Themes/default/MohaaTournamentEnhanced.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaTournaments.template.php:/var/www/html/Themes/default/MohaaTournaments.template.php
+      - ../opm-stats-smf-integration/smf-mohaa/Themes/default/MohaaWarRoom.template.php:/var/www/html/Themes/default/MohaaWarRoom.template.php
