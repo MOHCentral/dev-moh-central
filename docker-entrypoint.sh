@@ -29,10 +29,26 @@ elif [ -f "$SETTINGS_FILE" ] && grep -q "db_server" "$SETTINGS_FILE" 2>/dev/null
 else
     echo "[entrypoint] No configured Settings.php found."
     echo "[entrypoint] Run SMF installer at /install.php"
-    echo "[entrypoint] Then visit /save_settings.php to persist config!"
+    echo "[entrypoint] Settings will be auto-saved to volume after installation."
     chmod 666 "$SETTINGS_FILE" "$SETTINGS_BAK" 2>/dev/null || true
     chown www-data:www-data "$SETTINGS_FILE" "$SETTINGS_BAK" 2>/dev/null || true
 fi
+
+# Auto-backup Settings.php if it was created but not yet saved to volume
+# (This runs every 60 seconds in the background to catch new installations)
+(
+    while true; do
+        sleep 60
+        if [ -f "$SETTINGS_FILE" ] && grep -q "db_server" "$SETTINGS_FILE" 2>/dev/null; then
+            if [ ! -f "$CONFIG_DIR/Settings.php" ] || ! diff -q "$SETTINGS_FILE" "$CONFIG_DIR/Settings.php" >/dev/null 2>&1; then
+                echo "[auto-backup] Detected Settings.php changes, saving to volume..."
+                cp "$SETTINGS_FILE" "$CONFIG_DIR/Settings.php" 2>/dev/null || true
+                [ -f "$SETTINGS_BAK" ] && cp "$SETTINGS_BAK" "$CONFIG_DIR/Settings_bak.php" 2>/dev/null || true
+                echo "[auto-backup] Settings.php persisted to volume!"
+            fi
+        fi
+    done
+) &
 
 # Start Apache
 exec apache2-foreground
