@@ -20,8 +20,6 @@ services:
       - "com.mohaa.description=SMF Forum with MOHAA Stats Plugin"
     ports:
       - "8083:80"
-    env_file:
-      - .env
     environment:
       # SMF Database
       - SMF_DB_HOST=smf-mysql
@@ -53,8 +51,6 @@ services:
     labels:
       - "com.mohaa.service=smf-mysql"
       - "com.mohaa.description=MySQL database for SMF Forum"
-    env_file:
-      - .env
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_DATABASE=${SMF_DB_NAME}
@@ -85,8 +81,6 @@ services:
       - "com.mohaa.description=Database management UI"
     ports:
       - "8889:80"
-    env_file:
-      - .env
     environment:
       - PMA_HOST=smf-mysql
       - PMA_USER=root
