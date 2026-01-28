@@ -11,6 +11,12 @@ mkdir -p "$CONFIG_DIR"
 chown -R www-data:www-data "$CONFIG_DIR"
 chmod -R 777 "$CONFIG_DIR"
 
+# Allow skipping headless install via environment variable
+if [ "$SKIP_HEADLESS_INSTALL" = "1" ]; then
+    echo "[entrypoint] SKIP_HEADLESS_INSTALL=1, using SMF web installer..."
+    SETTINGS_TEMPLATE=""  # Force web installer path
+fi
+
 # PRIORITY 1: Restore from volume if available
 if [ -f "$CONFIG_DIR/Settings.php" ] && grep -q "db_server" "$CONFIG_DIR/Settings.php" 2>/dev/null; then
     echo "[entrypoint] Restoring Settings.php from persistent volume..."

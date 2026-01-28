@@ -1,6 +1,6 @@
 <?php
 /**
- * SMF Headless Installer - Creates core SMF tables without web interface
+ * SMF Headless Installer - Creates SMF tables using official schema
  * Run from CLI: php /var/www/html/install_smf_tables.php
  */
 error_reporting(E_ALL);
@@ -10,205 +10,73 @@ echo "=== SMF Headless Installer ===\n";
 echo "Database: $db_name @ $db_server\n";
 
 $conn = new mysqli($db_server, $db_user, $db_passwd, $db_name);
-if ($conn->connect_error) die("Connection failed: " . $conn->connect_error . "\n");
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error . "\n");
+}
 echo "Connected to MySQL.\n";
 
 // Check if already installed
-$result = $conn->query("SELECT COUNT(*) as cnt FROM {$db_prefix}members");
+mysqli_report(MYSQLI_REPORT_OFF);
+$result = @$conn->query("SELECT COUNT(*) as cnt FROM {$db_prefix}members");
 if ($result && $row = $result->fetch_assoc()) {
     if ($row['cnt'] > 0) {
-        echo "SMF already installed. Skipping.\n";
+        echo "SMF already installed ({$row['cnt']} members). Skipping table creation.\n";
+        $conn->close();
         exit(0);
     }
 }
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-echo "Creating SMF core tables...\n";
+// Load official SMF SQL
+$sqlFile = '/var/www/html/install_2-1_mysql.sql';
+if (!file_exists($sqlFile)) {
+    die("ERROR: Cannot find $sqlFile\n");
+}
 
-$tables = [
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}settings (variable VARCHAR(255) PRIMARY KEY, value TEXT NOT NULL) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}members (
-        id_member MEDIUMINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        member_name VARCHAR(80) NOT NULL DEFAULT '',
-        date_registered INT UNSIGNED NOT NULL DEFAULT 0,
-        posts MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
-        id_group SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-        lngfile VARCHAR(255) NOT NULL DEFAULT '',
-        last_login INT UNSIGNED NOT NULL DEFAULT 0,
-        real_name VARCHAR(255) NOT NULL DEFAULT '',
-        passwd VARCHAR(64) NOT NULL DEFAULT '',
-        email_address VARCHAR(255) NOT NULL DEFAULT '',
-        personal_text VARCHAR(255) NOT NULL DEFAULT '',
-        birthdate DATE NOT NULL DEFAULT '1004-01-01',
-        website_title VARCHAR(255) NOT NULL DEFAULT '',
-        website_url VARCHAR(255) NOT NULL DEFAULT '',
-        signature TEXT,
-        avatar VARCHAR(255) NOT NULL DEFAULT '',
-        member_ip VARCHAR(255) NOT NULL DEFAULT '',
-        is_activated TINYINT UNSIGNED NOT NULL DEFAULT 1,
-        validation_code VARCHAR(10) NOT NULL DEFAULT '',
-        additional_groups VARCHAR(255) NOT NULL DEFAULT '',
-        total_time_logged_in INT UNSIGNED NOT NULL DEFAULT 0,
-        password_salt VARCHAR(255) NOT NULL DEFAULT '',
-        timezone VARCHAR(80) NOT NULL DEFAULT '',
-        buddy_list TEXT,
-        pm_ignore_list TEXT,
-        ignore_boards TEXT,
-        INDEX idx_member_name (member_name),
-        INDEX idx_real_name (real_name),
-        INDEX idx_email_address (email_address)
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}membergroups (
-        id_group SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        group_name VARCHAR(80) NOT NULL DEFAULT '',
-        description TEXT,
-        online_color VARCHAR(20) NOT NULL DEFAULT '',
-        min_posts MEDIUMINT NOT NULL DEFAULT -1,
-        icons VARCHAR(255) NOT NULL DEFAULT '',
-        group_type TINYINT NOT NULL DEFAULT 0,
-        hidden TINYINT NOT NULL DEFAULT 0
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}boards (
-        id_board SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        id_cat TINYINT UNSIGNED NOT NULL DEFAULT 0,
-        name VARCHAR(255) NOT NULL DEFAULT '',
-        description TEXT,
-        num_topics MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
-        num_posts MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
-        member_groups VARCHAR(255) NOT NULL DEFAULT '-1,0'
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}categories (
-        id_cat TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        cat_order TINYINT NOT NULL DEFAULT 0,
-        name VARCHAR(255) NOT NULL DEFAULT '',
-        description TEXT
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}messages (
-        id_msg INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        id_topic MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
-        id_board SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-        poster_time INT UNSIGNED NOT NULL DEFAULT 0,
-        id_member MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
-        subject VARCHAR(255) NOT NULL DEFAULT '',
-        poster_name VARCHAR(255) NOT NULL DEFAULT '',
-        poster_email VARCHAR(255) NOT NULL DEFAULT '',
-        poster_ip VARCHAR(255) NOT NULL DEFAULT '',
-        body TEXT,
-        approved TINYINT NOT NULL DEFAULT 1,
-        INDEX idx_topic (id_topic),
-        INDEX idx_id_board (id_board)
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}topics (
-        id_topic MEDIUMINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        id_board SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-        id_first_msg INT UNSIGNED NOT NULL DEFAULT 0,
-        id_last_msg INT UNSIGNED NOT NULL DEFAULT 0,
-        id_member_started MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
-        id_member_updated MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
-        num_replies INT UNSIGNED NOT NULL DEFAULT 0,
-        num_views INT UNSIGNED NOT NULL DEFAULT 0,
-        locked TINYINT NOT NULL DEFAULT 0,
-        approved TINYINT NOT NULL DEFAULT 1
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}sessions (
-        session_id VARCHAR(128) PRIMARY KEY,
-        last_update INT UNSIGNED NOT NULL DEFAULT 0,
-        data TEXT
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}themes (
-        id_member MEDIUMINT NOT NULL DEFAULT 0,
-        id_theme TINYINT UNSIGNED NOT NULL DEFAULT 1,
-        variable VARCHAR(255) NOT NULL DEFAULT '',
-        value TEXT,
-        PRIMARY KEY (id_theme, id_member, variable(30))
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}permissions (
-        id_group SMALLINT NOT NULL DEFAULT 0,
-        permission VARCHAR(30) NOT NULL DEFAULT '',
-        add_deny TINYINT NOT NULL DEFAULT 1,
-        PRIMARY KEY (id_group, permission)
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}board_permissions (
-        id_group SMALLINT NOT NULL DEFAULT 0,
-        id_profile SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-        permission VARCHAR(30) NOT NULL DEFAULT '',
-        add_deny TINYINT NOT NULL DEFAULT 1,
-        PRIMARY KEY (id_group, id_profile, permission)
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}permission_profiles (
-        id_profile SMALLINT AUTO_INCREMENT PRIMARY KEY,
-        profile_name VARCHAR(255) NOT NULL DEFAULT ''
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}scheduled_tasks (
-        id_task SMALLINT AUTO_INCREMENT PRIMARY KEY,
-        next_time INT NOT NULL DEFAULT 0,
-        time_offset INT NOT NULL DEFAULT 0,
-        time_regularity SMALLINT NOT NULL DEFAULT 0,
-        time_unit VARCHAR(1) NOT NULL DEFAULT 'h',
-        disabled TINYINT NOT NULL DEFAULT 0,
-        task VARCHAR(24) NOT NULL DEFAULT '',
-        callable VARCHAR(60) NOT NULL DEFAULT ''
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}log_actions (
-        id_action INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        id_log TINYINT UNSIGNED NOT NULL DEFAULT 1,
-        log_time INT UNSIGNED NOT NULL DEFAULT 0,
-        id_member MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
-        ip VARCHAR(255) NOT NULL DEFAULT '',
-        action VARCHAR(30) NOT NULL DEFAULT '',
-        extra TEXT
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}user_alerts (
-        id_alert INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        alert_time INT UNSIGNED NOT NULL DEFAULT 0,
-        id_member MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
-        content_type VARCHAR(255) NOT NULL DEFAULT '',
-        content_id INT UNSIGNED NOT NULL DEFAULT 0,
-        content_action VARCHAR(255) NOT NULL DEFAULT '',
-        is_read INT UNSIGNED NOT NULL DEFAULT 0,
-        extra TEXT
-    ) ENGINE=InnoDB",
-    "CREATE TABLE IF NOT EXISTS {$db_prefix}background_tasks (
-        id_task INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        task_file VARCHAR(255) NOT NULL DEFAULT '',
-        task_class VARCHAR(255) NOT NULL DEFAULT '',
-        task_data MEDIUMTEXT,
-        claimed_time INT UNSIGNED NOT NULL DEFAULT 0
-    ) ENGINE=InnoDB",
-];
+echo "Loading official SMF schema from $sqlFile...\n";
+$sql = file_get_contents($sqlFile);
 
-foreach ($tables as $sql) {
-    if ($conn->query($sql)) echo ".";
-    else echo "\nError: " . $conn->error . "\n";
+// Replace placeholders
+$engine = 'InnoDB';
+$sql = str_replace('{$db_prefix}', $db_prefix, $sql);
+$sql = str_replace('{$engine}', $engine, $sql);
+
+// Split by statement (CREATE TABLE, INSERT, etc.)
+// Remove comments and empty lines
+$statements = [];
+$lines = explode("\n", $sql);
+$currentStatement = '';
+foreach ($lines as $line) {
+    $line = trim($line);
+    if (empty($line) || $line[0] === '#' || strpos($line, '---') === 0) {
+        continue;
+    }
+    $currentStatement .= ' ' . $line;
+    if (substr($line, -1) === ';') {
+        $statements[] = trim($currentStatement);
+        $currentStatement = '';
+    }
+}
+
+echo "Executing " . count($statements) . " SQL statements...\n";
+$success = 0;
+$errors = 0;
+foreach ($statements as $stmt) {
+    if (empty(trim($stmt))) continue;
+    try {
+        if ($conn->query($stmt)) {
+            $success++;
+            if ($success % 20 === 0) echo ".";
+        }
+    } catch (Exception $e) {
+        // Ignore "already exists" errors
+        if (strpos($e->getMessage(), 'already exists') === false) {
+            $errors++;
+        }
+    }
 }
 echo "\n";
-
-// Insert core settings
-echo "Inserting settings...\n";
-$settings = [
-    ['smfVersion', '2.1.4'], ['news', 'SMF - Just Installed!'], ['compactTopicPagesEnable', '1'],
-    ['todayMod', '1'], ['enableBBC', '1'], ['defaultMaxMessages', '15'], ['defaultMaxTopics', '20'],
-    ['requireAgreement', '1'], ['registration_method', '0'], ['send_welcomeEmail', '1'],
-    ['allow_editDisplayName', '1'], ['allow_hideOnline', '1'], ['autoLinkUrls', '1'],
-    ['failed_login_threshold', '3'], ['autoFixDatabase', '1'], ['allow_guestAccess', '1'],
-    ['time_format', '%B %d, %Y, %I:%M:%S %p'], ['enableCompressedOutput', '1'],
-    ['databaseSession_enable', '1'], ['databaseSession_lifetime', '2880'], ['cache_enable', '0'],
-    ['latestMember', '1'], ['latestRealName', 'admin'], ['totalMembers', '1'], ['totalTopics', '1'],
-    ['totalMessages', '1'], ['knownThemes', '1'], ['settings_updated', time()],
-    ['attachmentUploadDir', json_encode([1 => '/var/www/html/attachments'])],
-];
-$stmt = $conn->prepare("INSERT IGNORE INTO {$db_prefix}settings (variable, value) VALUES (?, ?)");
-foreach ($settings as $s) { $stmt->bind_param('ss', $s[0], $s[1]); $stmt->execute(); }
-
-// Create member groups
-echo "Creating member groups...\n";
-$groups = [
-    [1, 'Administrator', '#FF0000', -1, '5#iconadmin.png', 1],
-    [2, 'Global Moderator', '#0000FF', -1, '5#icongmod.png', 0],
-    [3, 'Moderator', '', -1, '5#iconmod.png', 0],
-    [4, 'Newbie', '', 0, '1#icon.png', 0],
-];
-$stmt = $conn->prepare("INSERT IGNORE INTO {$db_prefix}membergroups (id_group, group_name, online_color, min_posts, icons, group_type) VALUES (?, ?, ?, ?, ?, ?)");
-foreach ($groups as $g) { $stmt->bind_param('issisi', $g[0], $g[1], $g[2], $g[3], $g[4], $g[5]); $stmt->execute(); }
+echo "Executed: $success statements, Errors: $errors\n";
 
 // Create admin user
 echo "Creating admin user...\n";
@@ -218,28 +86,67 @@ $admin_pass_raw = getenv('SMF_ADMIN_PASS') ?: 'admin123';
 $admin_pass = hash('sha256', strtolower($admin_user) . $admin_pass_raw);
 $now = time();
 
-$stmt = $conn->prepare("INSERT IGNORE INTO {$db_prefix}members (id_member, member_name, real_name, passwd, email_address, date_registered, id_group, is_activated, buddy_list, pm_ignore_list, signature, ignore_boards) VALUES (1, ?, ?, ?, ?, ?, 1, 1, '', '', '', '')");
+$stmt = $conn->prepare("INSERT IGNORE INTO {$db_prefix}members 
+    (id_member, member_name, real_name, passwd, email_address, date_registered, id_group, is_activated, buddy_list, pm_ignore_list, signature, ignore_boards) 
+    VALUES (1, ?, ?, ?, ?, ?, 1, 1, '', '', '', '')");
 $stmt->bind_param('ssssi', $admin_user, $admin_user, $admin_pass, $admin_email, $now);
 $stmt->execute();
 
-// Create default category/board
+// Update version so SMF doesn't complain
+$conn->query("REPLACE INTO {$db_prefix}settings (variable, value) VALUES ('smfVersion', '2.1.6')");
+
+// Create default category/board if needed
 $conn->query("INSERT IGNORE INTO {$db_prefix}categories (id_cat, cat_order, name) VALUES (1, 0, 'General')");
 $conn->query("INSERT IGNORE INTO {$db_prefix}boards (id_board, id_cat, name, description, member_groups) VALUES (1, 1, 'General Discussion', 'Talk about anything.', '-1,0,2')");
-$conn->query("INSERT IGNORE INTO {$db_prefix}permission_profiles (id_profile, profile_name) VALUES (1, 'default')");
 
-// Theme settings
-$conn->query("INSERT IGNORE INTO {$db_prefix}themes (id_theme, variable, value, id_member) VALUES (1, 'name', 'SMF Default', 0)");
-$conn->query("INSERT IGNORE INTO {$db_prefix}themes (id_theme, variable, value, id_member) VALUES (1, 'theme_url', '/Themes/default', 0)");
-$conn->query("INSERT IGNORE INTO {$db_prefix}themes (id_theme, variable, value, id_member) VALUES (1, 'theme_dir', '/var/www/html/Themes/default', 0)");
+// Essential settings - fix placeholders and set required values
+$attachdir = json_encode([1 => '/var/www/html/attachments']);
+$settings = [
+    ['latestMember', '1'],
+    ['latestRealName', 'admin'],
+    ['totalMembers', '1'],
+    ['totalTopics', '0'],
+    ['totalMessages', '0'],
+    ['settings_updated', time()],
+    // Fix placeholders from install SQL
+    ['attachmentUploadDir', $attachdir],
+    ['attachment_basedirectories', json_encode([])],
+    ['currentAttachmentUploadDir', '1'],
+    ['boarddir', '/var/www/html'],
+    ['boardurl', getenv('SMF_URL') ?: 'http://localhost:8083'],
+    ['sourcedir', '/var/www/html/Sources'],
+    ['cachedir', '/var/www/html/cache'],
+    ['packagesdir', '/var/www/html/Packages'],
+    ['tasksdir', '/var/www/html/Sources/Tasks'],
+    ['avatar_url', (getenv('SMF_URL') ?: 'http://localhost:8083') . '/avatars'],
+    ['avatar_directory', '/var/www/html/avatars'],
+    ['smileys_url', (getenv('SMF_URL') ?: 'http://localhost:8083') . '/Smileys'],
+    ['smileys_dir', '/var/www/html/Smileys'],
+    ['language', 'english'],
+    ['theme_guests', '1'],
+    ['theme_default', '1'],
+    ['knownThemes', '1'],
+];
+$stmtS = $conn->prepare("REPLACE INTO {$db_prefix}settings (variable, value) VALUES (?, ?)");
+foreach ($settings as $s) {
+    $stmtS->bind_param('ss', $s[0], $s[1]);
+    $stmtS->execute();
+}
 
-// Welcome message
-$welcome = 'Welcome to MOH Central!';
-$stmt = $conn->prepare("INSERT IGNORE INTO {$db_prefix}messages (id_msg, id_topic, id_board, poster_time, id_member, subject, poster_name, poster_email, poster_ip, body, approved) VALUES (1, 1, 1, ?, 1, 'Welcome!', 'admin', ?, '127.0.0.1', ?, 1)");
-$stmt->bind_param('iss', $now, $admin_email, $welcome);
-$stmt->execute();
-
-$conn->query("INSERT IGNORE INTO {$db_prefix}topics (id_topic, id_board, id_first_msg, id_last_msg, id_member_started, id_member_updated) VALUES (1, 1, 1, 1, 1, 1)");
-$conn->query("UPDATE {$db_prefix}boards SET num_topics = 1, num_posts = 1 WHERE id_board = 1");
+// Fix theme placeholders
+$boardurl = getenv('SMF_URL') ?: 'http://localhost:8083';
+$themeUpdates = [
+    ['images_url', $boardurl . '/Themes/default/images'],
+    ['name', 'SMF Default Theme - Curve2'],
+    ['theme_url', $boardurl . '/Themes/default'],
+    ['theme_dir', '/var/www/html/Themes/default'],
+];
+$stmtT = $conn->prepare("UPDATE {$db_prefix}themes SET value = ? WHERE id_theme = 1 AND id_member = 0 AND variable = ?");
+foreach ($themeUpdates as $t) {
+    $stmtT->bind_param('ss', $t[1], $t[0]);
+    $stmtT->execute();
+}
+echo "Fixed theme settings.\n";
 
 echo "\n=== SMF Installation Complete ===\n";
 echo "Admin: $admin_user / $admin_pass_raw\n";

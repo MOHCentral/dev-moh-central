@@ -1,0 +1,20 @@
+# Local development override - builds from local Dockerfile instead of GHCR
+# Docker Compose automatically merges this with docker-compose.yml
+
+services:
+  dev-smf:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dev-moh-central:local
+    environment:
+      # Skip headless installer, use SMF web installer instead
+      - SKIP_HEADLESS_INSTALL=1
+      # SMF Database
+      - SMF_DB_SERVER=dev-smf-mysql
+      - SMF_DB_NAME=smf
+      - SMF_DB_USER=smf
+      - SMF_DB_PASS=smf_password
+      - SMF_URL=http://localhost:8083
+    volumes:
+      - ./Themes/default/MohaaStatsLeaderboard.template.php:/var/www/html/Themes/default/MohaaStatsLeaderboard.template.php
