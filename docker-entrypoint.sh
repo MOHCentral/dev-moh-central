@@ -5,9 +5,10 @@ CONFIG_DIR="/var/www/html/smf-config"
 SETTINGS_FILE="/var/www/html/Settings.php"
 SETTINGS_BAK="/var/www/html/Settings_bak.php"
 
-# Ensure config directory exists
+# Ensure config directory exists with proper permissions
 mkdir -p "$CONFIG_DIR"
-chown www-data:www-data "$CONFIG_DIR"
+chown -R www-data:www-data "$CONFIG_DIR"
+chmod -R 777 "$CONFIG_DIR"
 
 # PRIORITY 1: Restore from volume if available
 if [ -f "$CONFIG_DIR/Settings.php" ] && grep -q "db_server" "$CONFIG_DIR/Settings.php" 2>/dev/null; then

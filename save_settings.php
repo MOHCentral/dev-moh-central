@@ -17,7 +17,12 @@ if (!file_exists($settings) || !preg_match('/db_server/', file_get_contents($set
 // Ensure volume directory exists
 if (!is_dir($configDir)) {
     mkdir($configDir, 0777, true);
+    chown($configDir, 'www-data');
+    chgrp($configDir, 'www-data');
 }
+
+// Ensure directory is writable
+chmod($configDir, 0777);
 
 // Copy to volume
 $copied = copy($settings, $configDir . '/Settings.php');
