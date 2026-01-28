@@ -9,9 +9,16 @@ SETTINGS_BWC="/var/www/html/Settings_bak.php"
 mkdir -p "$CONFIG_DIR"
 chown www-data:www-data "$CONFIG_DIR"
 
+# ALWAYS ensure Settings files are writable (for installer)
+chmod 666 "$SETTINGS_FILE" 2>/dev/null || true
+chmod 666 "$SETTINGS_BWC" 2>/dev/null || true
+chown www-data:www-data "$SETTINGS_FILE" 2>/dev/null || true
+chown www-data:www-data "$SETTINGS_BWC" 2>/dev/null || true
+
 # If Settings.php exists in the persistent volume, symlink it
 if [ -f "$CONFIG_DIR/Settings.php" ]; then
     echo "Found persisted Settings.php, linking..."
+    rm -f "$SETTINGS_FILE" "$SETTINGS_BWC"
     ln -sf "$CONFIG_DIR/Settings.php" "$SETTINGS_FILE"
     if [ -f "$CONFIG_DIR/Settings_bak.php" ]; then
         ln -sf "$CONFIG_DIR/Settings_bak.php" "$SETTINGS_BWC"
