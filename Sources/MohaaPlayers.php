@@ -38,12 +38,8 @@ function MohaaPlayers_Main(): void
     
     switch ($sa) {
         case 'link':
-            // Redirect to profile identity linking page
-            if ($user_info['is_guest']) {
-                redirectexit('action=login');
-                return;
-            }
-            redirectexit('action=profile;area=mohaaidentity');
+            // Show dedicated identity linking page
+            MohaaPlayers_IdentityPage();
             break;
             
         case 'view':
@@ -854,7 +850,65 @@ function MohaaPlayers_MenuButtons(array &$buttons): void
 }
 
 /**
- * Redirect ?action=mohaaidentity to the profile area
+ * Standalone identity linking page (not in profile)
+ */
+function MohaaPlayers_IdentityPage(): void
+{
+    global $context, $user_info, $txt, $scripturl, $smcFunc;
+    
+    // Must be logged in
+    if ($user_info['is_guest']) {
+        redirectexit('action=login');
+        return;
+    }
+    
+    loadLanguage('MohaaStats');
+    loadTemplate('MohaaIdentity');
+    
+    $context['page_title'] = $txt['mohaa_identity'] ?? 'Link Account';
+    $context['sub_template'] = 'mohaaidentity';
+    $context['linktree'][] = [
+        'url' => $scripturl . '?action=mohaaplayers;sa=link',
+        'name' => $txt['mohaa_identity'] ?? 'Link Account',
+    ];
+    
+    // Get existing linked identities
+    $context['mohaa_identities'] = [];
+    $request = $smcFunc['db_query']('', '
+        SELECT id_identity, player_guid, player_name, linked_date, verified
+        FROM {db_prefix}mohaa_identities
+        WHERE id_member = {int:member}
+        ORDER BY linked_date DESC',
+        ['member' => $user_info['id']]
+    );
+    while ($row = $smcFunc['db_fetch_assoc']($request)) {
+        $context['mohaa_identities'][] = $row;
+    }
+    $smcFunc['db_free_result']($request);
+    
+    // Get or create claim code via API
+    require_once(__DIR__ . '/MohaaStats/MohaaStatsAPIClient.php');
+    $api = new MohaaStatsAPIClient();
+    $result = $api->initClaim($user_info['id']);
+    $context['mohaa_claim_code'] = $result['code'] ?? strtoupper(substr(md5($user_info['id'] . time()), 0, 8));
+    $context['mohaa_claim_expires'] = time() + ($result['expires_in'] ?? 600);
+    
+    // Get pending IP approvals (for security section)
+    $context['mohaa_pending_ips'] = [];
+    $request = $smcFunc['db_query']('', '
+        SELECT * FROM {db_prefix}mohaa_device_tokens
+        WHERE id_member = {int:member} AND verified = 0 AND expires_at > {int:now}
+        ORDER BY created_at DESC',
+        ['member' => $user_info['id'], 'now' => time()]
+    );
+    while ($row = $smcFunc['db_fetch_assoc']($request)) {
+        $context['mohaa_pending_ips'][] = $row;
+    }
+    $smcFunc['db_free_result']($request);
+}
+
+/**
+ * Redirect ?action=mohaaidentity to the identity page
  */
 function MohaaPlayers_IdentityRedirect(): void
 {
@@ -866,7 +920,7 @@ function MohaaPlayers_IdentityRedirect(): void
         return;
     }
     
-    // Redirect to the profile identity area
-    redirectexit('action=profile;area=mohaaidentity');
+    // Redirect to the standalone identity page
+    redirectexit('action=mohaaplayers;sa=link');
 }
 
