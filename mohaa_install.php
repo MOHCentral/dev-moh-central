@@ -69,7 +69,7 @@ if (!empty($sourcedir) && file_exists($sourcedir . '/DbPackages-mysql.php')) {
 }
 
 // Installer version - increment when schema changes 
-define('MOHAA_INSTALLER_VERSION', '2.0.1');
+define('MOHAA_INSTALLER_VERSION', '2.1.0');
 
 // Output header
 $is_cli = php_sapi_name() === 'cli';
@@ -418,11 +418,44 @@ function buildColumnSQL($name, $def) {
     return $sql;
 }
 
+// Force mode - drop and recreate all tables
+$forceRebuild = isset($_GET['force']) || isset($_SERVER['argv']) && in_array('--force', $_SERVER['argv']);
+
 // Process each table
 foreach ($tables as $tableName => $tableSpec) {
     $fullTableName = str_replace('{db_prefix}', $db_prefix, '{db_prefix}' . $tableName);
+    $needsRebuild = false;
     
-    if (!tableExists($tableName)) {
+    if (tableExists($tableName)) {
+        // Table exists - check if schema matches
+        $existingCols = getExistingColumns($tableName);
+        $expectedCols = array_keys($tableSpec['columns']);
+        
+        // Check for missing columns (columns we expect but don't exist)
+        $missingCols = [];
+        foreach ($expectedCols as $colName) {
+            if (!isset($existingCols[$colName])) {
+                $missingCols[] = $colName;
+            }
+        }
+        
+        // If any expected columns are missing, we need to rebuild
+        if (!empty($missingCols) || $forceRebuild) {
+            $needsRebuild = true;
+            // Drop the old table
+            try {
+                $smcFunc['db_query']('', "DROP TABLE IF EXISTS {db_prefix}$tableName", []);
+                output("Dropped table <b>$tableName</b> (missing columns: " . implode(', ', $missingCols) . ")", 'warning', $is_cli);
+            } catch (Exception $e) {
+                output("Failed to drop table <b>$tableName</b>: " . $e->getMessage(), 'error', $is_cli);
+                $errors[] = "Drop $tableName: " . $e->getMessage();
+                $stats['errors']++;
+                continue;
+            }
+        }
+    }
+    
+    if (!tableExists($tableName) || $needsRebuild) {
         // Create new table
         $columns_arr = [];
         foreach ($tableSpec['columns'] as $colName => $colDef) {
@@ -431,7 +464,7 @@ foreach ($tables as $tableName => $tableSpec) {
         
         try {
             $smcFunc['db_create_table']('{db_prefix}' . $tableName, $columns_arr, $tableSpec['indexes'], [], 'ignore');
-            output("Created table: <b>$tableName</b>", 'success', $is_cli);
+            output("Created table: <b>$tableName</b>" . ($needsRebuild ? " (rebuilt)" : ""), 'success', $is_cli);
             $stats['created']++;
         } catch (Exception $e) {
             output("Failed to create table: <b>$tableName</b> - " . $e->getMessage(), 'error', $is_cli);
@@ -439,31 +472,9 @@ foreach ($tables as $tableName => $tableSpec) {
             $stats['errors']++;
         }
     } else {
-        // Table exists - check for missing columns
-        $existingCols = getExistingColumns($tableName);
-        $addedCols = [];
-        
-        foreach ($tableSpec['columns'] as $colName => $colDef) {
-            if (!isset($existingCols[$colName])) {
-                // Add missing column
-                $colSQL = buildColumnSQL($colName, $colDef);
-                try {
-                    $smcFunc['db_query']('', "ALTER TABLE {db_prefix}$tableName ADD COLUMN $colSQL", []);
-                    $addedCols[] = $colName;
-                } catch (Exception $e) {
-                    $errors[] = "Column $tableName.$colName: " . $e->getMessage();
-                    $stats['errors']++;
-                }
-            }
-        }
-        
-        if (!empty($addedCols)) {
-            output("Updated table <b>$tableName</b>: added columns [" . implode(', ', $addedCols) . "]", 'success', $is_cli);
-            $stats['updated']++;
-        } else {
-            output("Table <b>$tableName</b> already up to date", 'skip', $is_cli);
-            $stats['skipped']++;
-        }
+        // Table exists with all expected columns - up to date
+        output("Table <b>$tableName</b> already up to date", 'skip', $is_cli);
+        $stats['skipped']++;
     }
 }
 
