@@ -10,10 +10,7 @@ services:
   # SMF Forum with MOHAA Stats Plugin
   # ============================================================================
   dev-smf:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: dev-smf:latest
+    image: ghcr.io/mohcentral/dev-moh-central:latest
     container_name: dev-smf
     extra_hosts:
       - "host.docker.internal:host-gateway"
