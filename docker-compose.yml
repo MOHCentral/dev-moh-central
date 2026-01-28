@@ -59,7 +59,6 @@ services:
       - "3307:3306"
     volumes:
       - dev-smf-mysql-data:/var/lib/mysql
-      - ./init-db:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
