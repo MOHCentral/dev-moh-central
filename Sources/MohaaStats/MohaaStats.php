@@ -25,6 +25,12 @@ function MohaaStats_Actions(array &$actions): void
 {
     $actions['mohaastats'] = ['MohaaStats/MohaaStats.php', 'MohaaStats_Main'];
     $actions['mohaaapi'] = ['MohaaStats/MohaaStatsAPI.php', 'MohaaStats_APIProxy'];
+    $actions['mohaadashboard'] = ['MohaaStats/MohaaStats.php', 'MohaaStats_MainPage'];
+    $actions['mohaaplayers'] = ['MohaaPlayers.php', 'MohaaPlayers_Main'];
+    $actions['mohaaservers'] = ['MohaaServers.php', 'MohaaServers_Main'];
+    $actions['mohaaachievements'] = ['MohaaAchievements.php', 'MohaaAchievements_Main'];
+    $actions['mohaateams'] = ['MohaaTeams.php', 'MohaaTeams_Main'];
+    $actions['mohaatournaments'] = ['MohaaTournaments.php', 'MohaaTournaments_Main'];
 }
 
 /**
